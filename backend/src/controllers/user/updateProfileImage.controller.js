@@ -19,7 +19,7 @@ const updateProfileImageController = async (req, res) => {
 
         const profileImage = await uploadOnCloudinary(profileImageLocalPath);
 
-        if (profileImage?.secure_url === null)
+        if (!profileImage || !profileImage.secure_url)
             return res.status(503).json({
                 success: false,
                 message: "Failed to upload profile image.",

@@ -6,7 +6,7 @@ import { removePortfolioExcelSheet } from "./src/utils/removePortfolioExcelSheet
 import { removeActivityHistoryPdf } from "./src/utils/removeActivityHistoryPdf.js";
 
 const allowedOrigins = [
-    process.env.FRONTEND_LINK
+    process.env.FRONTEND_LINK || "http://localhost:5173"
 ];
 const app = express();
 app.use(
