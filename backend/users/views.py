@@ -7,7 +7,6 @@ from django.conf import settings
 from django.contrib.auth import authenticate
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -98,15 +97,8 @@ def _add_activity_history(user, activity_type, message, token, browser, os_type)
 
 def _check_session_limit(user, current_token=None):
     """Check if user has reached 5 active session limit. Returns (ok, response)."""
-    sessions = ActiveSession.objects.filter(user=user)
-
-    # Clean up expired tokens
-    for session in sessions:
-        try:
-            Token.objects.get(key=session.token)
-        except Token.DoesNotExist:
-            session.delete()
-
+    # ActiveSession cleanup based on time can be done elsewhere if needed.
+    
     active_count = ActiveSession.objects.filter(user=user).count()
 
     if current_token:
@@ -290,25 +282,26 @@ class LoginView(APIView):
         if not ok:
             return response
 
-        # Create DRF token
-        token, _ = Token.objects.get_or_create(user=user)
+        # Create secure random token
+        import binascii, os
+        token_key = binascii.hexlify(os.urandom(20)).decode()
 
         # Create active session
         ActiveSession.objects.create(
             user=user,
-            token=token.key,
+            token=token_key,
             browser_type=browser,
             os_type=os_type,
         )
 
         # Add security alert
-        _add_security_alert(user, 'Login', 'New device logged in', token.key, browser, os_type)
+        _add_security_alert(user, 'Login', 'New device logged in', token_key, browser, os_type)
 
         return set_auth_cookie(Response({
             'success': True,
             'message': 'User logged in successfully',
-            'token': token.key,
-        }), token.key)
+            'token': token_key,
+        }), token_key)
 
 
 class GoogleLoginView(APIView):
@@ -370,22 +363,23 @@ class GoogleLoginView(APIView):
         if not ok:
             return response
 
-        token, _ = Token.objects.get_or_create(user=user)
+        import binascii, os
+        token_key = binascii.hexlify(os.urandom(20)).decode()
 
         ActiveSession.objects.create(
             user=user,
-            token=token.key,
+            token=token_key,
             browser_type=browser,
             os_type=os_type,
         )
 
-        _add_security_alert(user, 'Login', 'Google login', token.key, browser, os_type)
+        _add_security_alert(user, 'Login', 'Google login', token_key, browser, os_type)
 
         return set_auth_cookie(Response({
             'success': True,
             'message': 'User logged in successfully',
-            'token': token.key,
-        }), token.key)
+            'token': token_key,
+        }), token_key)
 
 
 class GoogleRegisterView(APIView):
@@ -437,34 +431,37 @@ class GoogleRegisterView(APIView):
         )
 
         browser, os_type = _get_user_agent_info(request)
-        token, _ = Token.objects.get_or_create(user=user)
+        import binascii, os
+        token_key = binascii.hexlify(os.urandom(20)).decode()
 
         ActiveSession.objects.create(
             user=user,
-            token=token.key,
+            token=token_key,
             browser_type=browser,
             os_type=os_type,
         )
 
-        _add_security_alert(user, 'Registration', 'Google registration', token.key, browser, os_type)
+        _add_security_alert(user, 'Registration', 'Google registration', token_key, browser, os_type)
 
         return set_auth_cookie(Response({
             'success': True,
             'message': 'User registered successfully',
-            'token': token.key,
-        }), token.key)
+            'token': token_key,
+        }), token_key)
 
 
 class LogoutView(APIView):
     """Logout current session."""
 
     def post(self, request):
-        token_key = request.auth.key if request.auth else None
+        token_key = request.auth.token if request.auth and hasattr(request.auth, 'token') else request.META.get('HTTP_AUTHORIZATION', '').replace('Token ', '')
+        if not token_key and request.COOKIES.get('auth_token'):
+            token_key = request.COOKIES.get('auth_token')
+            
         if token_key:
             ActiveSession.objects.filter(token=token_key).delete()
             browser, os_type = _get_user_agent_info(request)
             _add_security_alert(request.user, 'Logout', 'Session logged out', token_key, browser, os_type)
-            Token.objects.filter(key=token_key).delete()
 
         return delete_auth_cookie(Response({'success': True, 'message': 'Logged out successfully'}))
 
@@ -488,7 +485,6 @@ class LogoutSessionView(APIView):
             )
 
         session.delete()
-        Token.objects.filter(key=session_token).delete()
 
         browser, os_type = _get_user_agent_info(request)
         _add_security_alert(request.user, 'Logout', 'Specific session logged out', session_token, browser, os_type)
@@ -500,11 +496,9 @@ class LogoutAllSessionsView(APIView):
     """Logout all sessions except current."""
 
     def post(self, request):
-        current_token = request.auth.key if request.auth else None
+        current_token = request.auth.token if request.auth and hasattr(request.auth, 'token') else request.META.get('HTTP_AUTHORIZATION', '').replace('Token ', '')
         sessions = ActiveSession.objects.filter(user=request.user).exclude(token=current_token)
 
-        for session in sessions:
-            Token.objects.filter(key=session.token).delete()
         sessions.delete()
 
         browser, os_type = _get_user_agent_info(request)
