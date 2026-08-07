@@ -341,12 +341,18 @@ class GoogleLoginView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        name = payload.get('name', 'User')
+        picture = payload.get('picture', '')
+
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            return Response(
-                {'success': False, 'message': 'User is not registered'},
-                status=status.HTTP_410_GONE
+            user = User.objects.create_user(
+                email=email,
+                name=name,
+                password=None,
+                registration_method='google',
+                profile_image=picture,
             )
 
         if user.registration_method != 'google':

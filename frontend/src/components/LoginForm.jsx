@@ -93,9 +93,16 @@ const LoginForm = ({ toggleForm, resetFormStates: parentResetFormStates }) => {
           setUserLoggedIn(true);
           navigate("/Dashboard");
         }catch(err){  
-          console.log("Google login error:", err.response.data.message);
-          if(err.response.data.message)
-            setTitleError(err.response.data.message);
+          const errorMsg = err.response?.data?.message || "An error occurred during login. Please try again.";
+          console.log("Google login error:", errorMsg);
+          setTitleError(errorMsg);
+          Swal.fire({
+            icon: "error",
+            title: "Login Failed",
+            text: errorMsg,
+            background: "#1e1e1e",
+            color: "#ffffff"
+          });
         }finally {
           setGoogleLoginLoading(false);
         }
