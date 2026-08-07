@@ -31,15 +31,10 @@ export const Sidebar = ({ primaryData = {} }) => {
 
     }, [location.pathname]);
 
-    const handleLogout = async () => {
-        try {
-            await axios.post(import.meta.env.VITE_BACKEND_LINK + "/users/logout/", {}, { withCredentials: true });
-            localStorage.removeItem("activeMenu");
-            navigate("/");
-        }
-        catch (err) {
-            console.error("Error during logout:", err.response?.data?.message || err.message);
-        }
+    const handleLogout = () => {
+        axios.post(import.meta.env.VITE_BACKEND_LINK + "/users/logout/", {}, { withCredentials: true }).catch(e => console.error("Error during logout:", e));
+        localStorage.removeItem("activeMenu");
+        window.location.href = "/";
     }
 
     const handleMenuClick = (fieldName) => {

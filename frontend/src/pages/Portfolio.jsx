@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { useQuery } from '@tanstack/react-query';
 import axios from "axios";
 import Navbar from "../components/Navbar.jsx";
 import DashboardHeader from '../components/Dashboard-Header.jsx';
@@ -16,13 +17,7 @@ export const Portfolio = () => {
     axios.defaults.withCredentials = true;
     const { userDetails, setIsSearchActive, ensureAuth } = useAppContext();
     const [darkMode, setDarkMode] = useState(true);
-    const [userPortfolio, setUserPortfolio] = useState({});
-    const [portfolioSummary, setPortfolioSummary] = useState([]);
-    const [portfolioHoldings, setPortfolioHoldings] = useState([]);
-    const [portfolioFundamentals, setPortfolioFundamentals] = useState([]);
     const [selectedMode, setSelectedMode] = useState("summary");
-    const [portfolioRisk, setPortfolioRisk] = useState("unknown");
-    const [error, setError] = useState("");
 
     const handleMode = (mode) => {
         setSelectedMode(mode);
@@ -30,102 +25,72 @@ export const Portfolio = () => {
 
     const navigate = useNavigate();
     
-      useEffect(() => {
-                 // Run an initial check: this page is an auth/home page, so pass true
-              (async () => {
-                try {
-                  await ensureAuth(navigate, false);
-                } catch (e) {
-                  console.error("ensureAuth initial check failed:", e);
-                }
-              })();
+    useEffect(() => {
+        (async () => {
+            try {
+                await ensureAuth(navigate, false);
+            } catch (e) {
+                console.error("ensureAuth initial check failed:", e);
+            }
+        })();
         
-              const intervalId = setInterval(() => {
-                ensureAuth(navigate, false).catch((e) => console.error(e));
-              }, 10000);
+        const intervalId = setInterval(() => {
+            ensureAuth(navigate, false).catch((e) => console.error(e));
+        }, 10000);
         
-              return () => {
-                clearInterval(intervalId);
-              };
-        },  [navigate, ensureAuth]);
-
-    useEffect(() => {
-        const getUserPortfolio = async () => {
-            try {
-                const res = await axios.get(`${BASE_URL}/dashboard/valuation/`, { withCredentials: true });
-                const raw = res.data;
-                
-                console.log("User portfolio data:", raw);
-
-                setUserPortfolio(raw);
-
-            } catch (error) {
-                console.error("Error fetching user's portfolio data:", error);
-            }
+        return () => {
+            clearInterval(intervalId);
         };
-        getUserPortfolio();
-    }, []);
+    }, [navigate, ensureAuth]);
+    const { data: userPortfolio = {}, isLoading: isValuationLoading } = useQuery({
+        queryKey: ['portfolioValuation'],
+        queryFn: async () => {
+            const res = await axios.get(`${BASE_URL}/dashboard/valuation/`, { withCredentials: true });
+            return res.data.data || {};
+        }
+    });
 
-    useEffect(() => {
-        const getPortfolioSummary = async () => {
-            try {
-                const res = await axios.get(`${BASE_URL}/portfolio/summary/`, { withCredentials: true });
-                const summary = res.data.summary;
+    const { data: portfolioSummaryRaw = [], isLoading: isSummaryLoading } = useQuery({
+        queryKey: ['portfolioSummary'],
+        queryFn: async () => {
+            const res = await axios.get(`${BASE_URL}/portfolio/summary/`, { withCredentials: true });
+            return res.data.summary || [];
+        }
+    });
 
-                if(summary){
-                console.log("Portfolio Summary:", summary);
-                setPortfolioRisk(getPortfolioRiskFromCaps(summary));
-                
-                const cleaned = summary.map(item => ({
-                    ...item,
-                    marketCap: formatLargeNumber(item.marketCap),
-                    lastPrice: roundTo(item.lastPrice, 2),
-                    change: roundTo(item.change, 2),
-                    changePercent: formatPercentage(item.changePercent),
-                    marketTime: item.marketTime,
-                    totalValue: formatLargeNumber(item.totalValue),
-                    profitLoss: formatLargeNumber(item.profitLoss),
-                    profitLossPercentage: formatPercentage(item.profitLossPercentage),
-                    allocationPercentage: formatPercentage(item.allocationPercentage),
-                }));
-                setPortfolioSummary(cleaned);
-                }
+    const portfolioRisk = getPortfolioRiskFromCaps(portfolioSummaryRaw);
+    const portfolioSummary = useMemo(
+        () =>
+            portfolioSummaryRaw.map(item => ({
+                ...item,
+                marketCap: formatLargeNumber(item.marketCap),
+                lastPrice: roundTo(item.lastPrice, 2),
+                change: roundTo(item.change, 2),
+                changePercent: formatPercentage(item.changePercent),
+                marketTime: item.marketTime,
+                totalValue: formatLargeNumber(item.totalValue),
+                profitLoss: formatLargeNumber(item.profitLoss),
+                profitLossPercentage: formatPercentage(item.profitLossPercentage),
+                allocationPercentage: formatPercentage(item.allocationPercentage),
+            })),
+        [portfolioSummaryRaw]
+    );
 
-            } catch (error) {
-                console.error("Error fetching portfolio summary:", error);
-            }
-        };
-        getPortfolioSummary();
-    }, []);
+    const { data: portfolioHoldings = [] } = useQuery({
+        queryKey: ['portfolioHoldings'],
+        queryFn: async () => {
+            const res = await axios.get(`${BASE_URL}/portfolio/holdings/`, { withCredentials: true });
+            return res.data.data || [];
+        }
+    });
 
-    useEffect(() => {
-        const getPortfolioHoldings = async () => {
-            try {
-                const res = await axios.get(`${BASE_URL}/portfolio/holdings/`, { withCredentials: true });
-                const data  = res.data.data;
-
-                console.log("Portfolio Holdings:", data);
-                
-                if(data){
-                setPortfolioHoldings(data);
-                }
-
-            } catch (error) {
-                console.error("Error fetching portfolio holdings:", error);
-            }
-        };
-        getPortfolioHoldings();
-    }, []);
-
-    useEffect(() => {
-        const getPortfolioFundamentals = async () => {
-            try {
-                const res = await axios.get(`${BASE_URL}/portfolio/fundamentals/`, { withCredentials: true });
-                const data = res.data.data;
-                
-                if(data){
-                console.log("Portfolio Fundamentals:", data);
-                const cleaned = data.map(item => ({
+    const { data: portfolioFundamentals = [] } = useQuery({
+        queryKey: ['portfolioFundamentals'],
+        queryFn: async () => {
+            const res = await axios.get(`${BASE_URL}/portfolio/fundamentals/`, { withCredentials: true });
+            const data = res.data.data;
+            if (data) {
+                return data.map(item => ({
                     ...item,
                     marketCap: formatLargeNumber(item.marketCap) ?? "--",
                     epsEstimateNextYear: roundTo(item.epsEstimateNextYear, 2) ?? "--",
@@ -140,16 +105,10 @@ export const Portfolio = () => {
                     priceToBook: roundTo(item.priceToBook, 2) ?? "--",
                     currentHolding: formatLargeNumber(item.currentHolding) ?? "--",
                 }));
-
-                setPortfolioFundamentals(cleaned);
-                }
-
-            } catch (error) {
-                console.error("Error fetching portfolio fundamentals:", error);
             }
-        };
-        getPortfolioFundamentals();
-    }, []);
+            return [];
+        }
+    });
 
     return (
         <div className="portfolio-main-page">
@@ -163,33 +122,53 @@ export const Portfolio = () => {
                     <div className="first-div">
                         <div className="total-val-cur">
                             <div className="label-cur">Total Current Value</div>
-                            <div className="amount-cur">₹{userPortfolio.totalValuation}</div>
+                            {isValuationLoading ? (
+                                <div className="skeleton" style={{ width: '180px', height: '40px', marginTop: '8px', borderRadius: '8px' }}></div>
+                            ) : (
+                                <div className="amount-cur">₹{userPortfolio.totalValuation}</div>
+                            )}
                         </div>
                         <div className="total-val-inv">
                             <div className="label-inv">Total Invested Value</div>
-                            <div className="amount-inv">₹{userPortfolio.totalInvestment}</div>
+                            {isValuationLoading ? (
+                                <div className="skeleton" style={{ width: '180px', height: '40px', marginTop: '8px', borderRadius: '8px' }}></div>
+                            ) : (
+                                <div className="amount-inv">₹{userPortfolio.totalInvestment}</div>
+                            )}
                         </div>
                     </div>
                     <div className="second-div">
                         <div className="today-gl">
                             <div className="today-gl-label">Today's Gain/Loss</div>
-                            <div className={`today-gl-amount ${userPortfolio.todayProfitLoss > 0 ? "profit" : 
-                                                                userPortfolio.todayProfitLoss < 0 ? "loss" : ""}`} data-testid="today-gl-amount">
-                                ₹{userPortfolio.todayProfitLoss} ({userPortfolio.todayProfitLosspercentage > 0 ? "+" : ""}{`${userPortfolio.todayProfitLosspercentage}%`})
-                            </div>
+                            {isValuationLoading ? (
+                                <div className="skeleton" style={{ width: '160px', height: '28px', marginTop: '8px', borderRadius: '6px' }}></div>
+                            ) : (
+                                <div className={`today-gl-amount ${userPortfolio.todayProfitLoss > 0 ? "profit" : 
+                                                                    userPortfolio.todayProfitLoss < 0 ? "loss" : ""}`} data-testid="today-gl-amount">
+                                    ₹{userPortfolio.todayProfitLoss} ({userPortfolio.todayProfitLosspercentage > 0 ? "+" : ""}{`${userPortfolio.todayProfitLosspercentage}%`})
+                                </div>
+                            )}
                         </div>
                         <div className="overall-gl">
                             <div className="overall-gl-label">Overall Gain/Loss</div>
-                            <div className={`overall-gl-amount ${userPortfolio.overallProfitLoss > 0 ? "profit" :
-                                                                    userPortfolio.overallProfitLoss < 0 ? "loss" : ""}`} data-testid="overall-gl-amount">
-                                ₹{userPortfolio.overallProfitLoss} ({userPortfolio.overallProfitLosspercentage > 0 ? "+" : ""}{`${userPortfolio.overallProfitLosspercentage}%`})
-                            </div>
+                            {isValuationLoading ? (
+                                <div className="skeleton" style={{ width: '160px', height: '28px', marginTop: '8px', borderRadius: '6px' }}></div>
+                            ) : (
+                                <div className={`overall-gl-amount ${userPortfolio.overallProfitLoss > 0 ? "profit" :
+                                                                        userPortfolio.overallProfitLoss < 0 ? "loss" : ""}`} data-testid="overall-gl-amount">
+                                    ₹{userPortfolio.overallProfitLoss} ({userPortfolio.overallProfitLosspercentage > 0 ? "+" : ""}{`${userPortfolio.overallProfitLosspercentage}%`})
+                                </div>
+                            )}
                         </div>
                         <div className="risk">
                             <div className="risk-label">Portfolio Risk</div>
-                            <div className={`risk-amount ${portfolioRisk === "Conservative" ? "low" 
-                                                            : portfolioRisk === "Moderate" ? "med"
-                                                            : portfolioRisk === "Aggressive" ? "high" : ""}`}>{portfolioRisk}</div>
+                            {isSummaryLoading ? (
+                                <div className="skeleton" style={{ width: '120px', height: '28px', marginTop: '8px', borderRadius: '6px' }}></div>
+                            ) : (
+                                <div className={`risk-amount ${portfolioRisk === "Conservative" ? "low" 
+                                                                : portfolioRisk === "Moderate" ? "med"
+                                                                : portfolioRisk === "Aggressive" ? "high" : ""}`}>{portfolioRisk}</div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -223,8 +202,7 @@ export const Portfolio = () => {
                     navigationLinks={[
                         { text: "Portfolio", href: "/portfolio" },
                         { text: "AI Insigths", href: "/ai-insight" },
-                        { text: "Wacthlist", href: "/watchlist" },
-                        { text: "Compare Stocks", href: "#" },
+                        { text: "Watchlist", href: "/watchlist" }
                     ]}
                     legalLinks={[
                         { text: "Privacy Policy", href: "#privacy" },

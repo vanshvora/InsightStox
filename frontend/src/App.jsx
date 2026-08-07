@@ -14,8 +14,19 @@ import {Preference} from './pages/Preference'
 import AiInsight from './pages/AiInsight';
 import Watchlist from './pages/WatchList';
 import {createBrowserRouter,RouterProvider} from "react-router-dom";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DataPrivacy } from './pages/DataPrivacy'; 
 import { ActivitySessionHistory } from './pages/ActivitySessionHistory';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes cache
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
 const router = createBrowserRouter(
   [
     {
@@ -76,9 +87,9 @@ function App() {
     });
   }, []);
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
          <RouterProvider router={router} />
-    </>
+    </QueryClientProvider>
   )
 }
 

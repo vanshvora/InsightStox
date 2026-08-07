@@ -40,7 +40,7 @@ export default function StockChart({ symbol, range: initialRange = "1Y", data: i
 
   axios.defaults.withCredentials = true;
   const BACKEND = import.meta.env.VITE_BACKEND_LINK;
-  const API_URL = `${BACKEND}/api/v1/dashBoard/graph?ticker=${symbol}`;
+  const API_URL = `${BACKEND}/dashboard/graph/?ticker=${symbol}`;
 
   const options = useMemo(() => {
     return {
@@ -112,12 +112,19 @@ export default function StockChart({ symbol, range: initialRange = "1Y", data: i
     const fetchData = async () => {
       try {
         setLoading(true);
-        const res = await axios.get(API_URL);
-        const { x, y } = res.data;
+        setError("");
+        const res = await axios.get(API_URL, { params: { period: "1y" } });
+        const payload = res.data || {};
+        const x = payload.x || [];
+        const y = payload.y || [];
+        if (!x.length || !y.length) {
+          setError("No chart data available for this stock.");
+          return;
+        }
         setRawDates(x);
         setRawValues(y);
       } catch (err) {
-        setError("Failed to fetch stock chart data.");
+        setError(err.response?.data?.message || "Failed to fetch stock chart data.");
       } finally {
         setLoading(false);
       }

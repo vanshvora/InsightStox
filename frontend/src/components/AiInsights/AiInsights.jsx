@@ -108,18 +108,24 @@ return (
   <div className="aiinsights-wrapper">
     <div className="card insights-card">
       <h2 className="ai-title">AI - Powered Insights</h2>
-            <div className="insights">
+          <div className="insights">
               {formattedInsights.length > 0 ? (
                 formattedInsights.map((val, index) => (
                   <p key={index} className="insight-item">{val}</p>
                 ))
               ) : (
-                <p >{error}</p>
+                <div style={{ color: '#aaa', marginTop: '1rem' }}>
+                  <p style={{ marginBottom: '1rem', fontSize: '1.05rem', lineHeight: '1.5' }}>
+                    Discover personalized, AI-driven recommendations based on your current holdings, performance, and risk profile.
+                  </p>
+                </div>
               )}
             </div>
-            <p className="view-all">
-                <Link to="/ai-insight">Explore AI Insights →</Link>
-            </p>
+            <div style={{ marginTop: 'auto', marginBottom: '1rem' }}>
+              <p className="view-all">
+                  <Link to="/ai-insight">Explore AI Insights →</Link>
+              </p>
+            </div>
           </div>
   </div>
 );

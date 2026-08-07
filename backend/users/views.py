@@ -32,6 +32,29 @@ import requests as http_requests
 _otp_store = {}
 
 
+def set_auth_cookie(response, token):
+    is_prod = not settings.DEBUG
+    response.set_cookie(
+        'auth_token',
+        token,
+        max_age=30 * 24 * 60 * 60,
+        httponly=True,
+        samesite='None' if is_prod else 'Lax',
+        secure=is_prod,
+    )
+    return response
+
+def delete_auth_cookie(response):
+    is_prod = not settings.DEBUG
+    response.delete_cookie(
+        'auth_token', 
+        samesite='None' if is_prod else 'Lax',
+        httponly=True,
+        secure=is_prod
+    )
+    return response
+
+
 def _get_user_agent_info(request):
     """Extract browser and OS info from User-Agent header."""
     ua = request.META.get('HTTP_USER_AGENT', 'Unknown')
@@ -112,10 +135,11 @@ def _check_session_limit(user, current_token=None):
             )
 
     if active_count >= 5:
-        return False, Response(
-            {'success': False, 'message': 'You have reached your limit of 5 active sessions. Please close one of your active sessions to continue.'},
-            status=status.HTTP_409_CONFLICT
-        )
+        # Instead of blocking the user, gracefully delete their oldest sessions 
+        # to make room for the new one. Keep the 4 newest sessions.
+        oldest_sessions = ActiveSession.objects.filter(user=user).order_by('last_active_time')
+        sessions_to_delete = oldest_sessions.values_list('id', flat=True)[:active_count - 4]
+        ActiveSession.objects.filter(id__in=list(sessions_to_delete)).delete()
 
     return True, None
 
@@ -240,7 +264,24 @@ class RegisterView(APIView):
         )
         _otp_store.pop(email, None)
 
-        return Response({'success': True, 'message': 'User registered successfully'})
+        browser, os_type = _get_user_agent_info(request)
+        import binascii, os
+        token_key = binascii.hexlify(os.urandom(20)).decode()
+
+        ActiveSession.objects.create(
+            user=user,
+            token=token_key,
+            browser_type=browser,
+            os_type=os_type,
+        )
+
+        _add_security_alert(user, 'Login', 'New device logged in via registration', token_key, browser, os_type)
+
+        return set_auth_cookie(Response({
+            'success': True,
+            'message': 'User registered successfully',
+            'token': token_key,
+        }), token_key)
 
 
 class LoginView(APIView):
@@ -461,7 +502,8 @@ class LogoutView(APIView):
         if token_key:
             ActiveSession.objects.filter(token=token_key).delete()
             browser, os_type = _get_user_agent_info(request)
-            _add_security_alert(request.user, 'Logout', 'Session logged out', token_key, browser, os_type)
+            if request.user and request.user.is_authenticated:
+                _add_security_alert(request.user, 'Logout', 'Session logged out', token_key, browser, os_type)
 
         return delete_auth_cookie(Response({'success': True, 'message': 'Logged out successfully'}))
 
@@ -802,7 +844,7 @@ class CheckTokenView(APIView):
 
     def get(self, request):
         if request.user and request.user.is_authenticated:
-            token_key = request.auth.key if request.auth else None
+            token_key = request.auth.token if hasattr(request.auth, 'token') else None
             if token_key:
                 session = ActiveSession.objects.filter(token=token_key).first()
                 if session:

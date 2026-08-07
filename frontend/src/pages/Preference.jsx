@@ -46,7 +46,7 @@ export const Preference = () => {
     
     async function fetchPreferences() {
       try {
-        const response = await axios.get(import.meta.env.VITE_BACKEND_LINK + "/api/v1/users/getPreferencesAndPersonalisation",
+        const response = await axios.get(import.meta.env.VITE_BACKEND_LINK + "/users/preferences/",
           {withCredentials:true}
         );
         
@@ -195,8 +195,7 @@ export const Preference = () => {
           navigationLinks={[
             { text: "Portfolio", href: "/portfolio" },
             { text: "AI Insights", href: "/ai-insight" },
-            { text: "Watchlist", href: "/watchlist" },
-            { text: "Compare Stocks", href: "#" },
+            { text: "Watchlist", href: "/watchlist" }
           ]}
           legalLinks={[
             { text: "Privacy Policy", href: "#privacy" },

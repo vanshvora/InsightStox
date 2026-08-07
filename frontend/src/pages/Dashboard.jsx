@@ -7,8 +7,6 @@ import DashboardHeader from '../components/Dashboard-Header.jsx';
 import MarketMovers from '../components/MarketMovers/MarketMovers'
 import WelcomeInvestor from '../components/WelcomeInvestor/WelcomeInvestor'
 import PortfolioChart from '../components/PortfolioChart/PortfolioChart'
-import SectorAllocation from '../components/SectorAllocation/SectorAllocation'
-import AiInsights from '../components/AiInsights/AiInsights'
 import MyHoldings from '../components/MyHoldings/MyHoldings'
 import Navbar from '../components/Navbar.jsx';
 import { useAppContext } from "../context/AppContext";
@@ -49,10 +47,6 @@ export const Dashboard = () => {
       <div className="section-wrapper">
         <WelcomeInvestor />
         <PortfolioChart/>
-        <div className="sectorai">
-        <SectorAllocation/>
-        <AiInsights/>
-        </div>
         <MyHoldings/>
         <MarketMovers />
       </div>
@@ -61,10 +55,8 @@ export const Dashboard = () => {
         navigationLinks={[
             { text: "Portfolio", href: "/portfolio" },
             { text: "AI Insigths", href: "/ai-insight" },
-            { text: "Wacthlist", href: "/watchlist" },
-            { text: "Compare Stocks", href: "#" },
-
-        ]}
+            { text: "Watchlist", href: "/watchlist" }
+          ]}
         legalLinks={[
             { text: "Privacy Policy", href: "#privacy" },
             { text: "Terms Of Service", href: "#terms" },

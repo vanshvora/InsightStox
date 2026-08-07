@@ -1,119 +1,119 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import { vi } from "vitest";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { vi, beforeEach, describe, test, expect } from "vitest";
 import axios from "axios";
 
-// MOCK axios
 vi.mock("axios");
-axios.get = vi.fn();
-
-// MOCK CSS
 vi.mock("../../src/components/MyHoldings/MyHoldings.css", () => ({}));
 
-// IMPORT COMPONENT
+const mockNavigate = vi.fn();
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom");
+  return {
+    ...actual,
+    Link: ({ children, to }) => <a href={to}>{children}</a>,
+    useNavigate: () => mockNavigate,
+  };
+});
+
 import MyHoldings from "../../src/components/MyHoldings/MyHoldings.jsx";
 
-// SHARED MOCK HOLDINGS
 const mockHoldings = [
   {
-    shortName: "TCS",
-    quantity: 10,
-    avg_price: 3200,
-    current_price: 3500,
-    value: 35000
+    name: "Tata Consultancy Services",
+    symbol: "TCS",
+    shares: 10,
+    avgPrice: 3200,
+    lastPrice: 3500,
+    marketValue: 35000,
   },
   {
-    shortName: "INFY",
-    quantity: 5,
-    avg_price: 1400,
-    current_price: 1500,
-    value: 7500
-  }
+    name: "Infosys Limited",
+    symbol: "INFY",
+    shares: 5,
+    avgPrice: 1400,
+    lastPrice: 1500,
+    marketValue: 7500,
+  },
 ];
 
-describe("MyHoldings Component — Full Coverage Suite", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+function renderWithQueryClient(ui) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+    },
   });
 
-  // -------------------------------------------------------------
+  return render(
+    <QueryClientProvider client={queryClient}>
+      {ui}
+    </QueryClientProvider>
+  );
+}
+
+describe("MyHoldings Component", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockNavigate.mockReset();
+  });
+
   test("shows loading state initially", async () => {
     axios.get.mockResolvedValueOnce({
-      data: { data: mockHoldings }
+      data: { data: mockHoldings },
     });
 
-    render(<MyHoldings />);
+    renderWithQueryClient(<MyHoldings />);
 
     expect(screen.getByText("Loading holdings...")).toBeInTheDocument();
 
     await waitFor(() => expect(axios.get).toHaveBeenCalled());
   });
 
-  // -------------------------------------------------------------
-  test("renders table correctly on successful fetch", async () => {
+  test("renders holdings in a watchlist-style table layout", async () => {
     axios.get.mockResolvedValueOnce({
-      data: { data: mockHoldings }
+      data: { data: mockHoldings },
     });
 
-    render(<MyHoldings />);
+    renderWithQueryClient(<MyHoldings />);
 
-    await screen.findByText("My Holdings");
-
-    // Validate stock rows
+    expect(await screen.findByText("Tata Consultancy Services")).toBeInTheDocument();
     expect(screen.getByText("TCS")).toBeInTheDocument();
-    expect(screen.getByText("INFY")).toBeInTheDocument();
-
-    // Values formatted properly
-    expect(screen.getByText("3,200")).toBeInTheDocument();
-    expect(screen.getByText("3,500")).toBeInTheDocument();
-    expect(screen.getByText("35,000")).toBeInTheDocument();
+    expect(screen.getByText("Infosys Limited")).toBeInTheDocument();
+    expect(screen.getByText("3,200.00")).toBeInTheDocument();
+    expect(screen.getByText("3,500.00")).toBeInTheDocument();
+    expect(screen.getByText("35,000.00")).toBeInTheDocument();
+    expect(screen.getByText("7,500.00")).toBeInTheDocument();
   });
 
-  // -------------------------------------------------------------
-  test("handles API error gracefully", async () => {
-    axios.get.mockRejectedValueOnce(new Error("Network failed"));
+  test("navigates to stock details from the holding row", async () => {
+    axios.get.mockResolvedValueOnce({
+      data: { data: mockHoldings },
+    });
 
-    render(<MyHoldings />);
+    renderWithQueryClient(<MyHoldings />);
 
-    await screen.findByText("Failed to load holdings. Please ensure you are logged in.");
+    fireEvent.click(await screen.findByText("Tata Consultancy Services"));
+
+    expect(mockNavigate).toHaveBeenCalledWith("/stockdetails/TCS");
   });
 
-  // -------------------------------------------------------------
+  test("shows an empty holdings state", async () => {
+    axios.get.mockResolvedValueOnce({
+      data: { data: [] },
+    });
+
+    renderWithQueryClient(<MyHoldings />);
+
+    expect(await screen.findByText("Nothing in holdings yet")).toBeInTheDocument();
+  });
+
   test("handles invalid response format", async () => {
     axios.get.mockResolvedValueOnce({
-      data: { message: "wrong format" } // missing data array
+      data: { message: "wrong format" },
     });
 
-    render(<MyHoldings />);
+    renderWithQueryClient(<MyHoldings />);
 
-    await screen.findByText("Failed to load holdings. Please ensure you are logged in.");
-  });
-
-  // -------------------------------------------------------------
-  test("renders empty holdings table correctly", async () => {
-  axios.get.mockResolvedValueOnce({
-    data: { data: [] }
-  });
-
-  render(<MyHoldings />);
-
-  await screen.findByText("My Holdings");
-
-  // Only header row is rendered
-  const rows = screen.getAllByRole("row");
-  expect(rows.length).toBe(1); // correct: only header row
-});
-
-
-  // -------------------------------------------------------------
-  test("component renders title always after loading", async () => {
-    axios.get.mockResolvedValueOnce({
-      data: { data: mockHoldings }
-    });
-
-    render(<MyHoldings />);
-
-    await screen.findByText("My Holdings");
-
-    expect(screen.getByText("See More →")).toBeInTheDocument();
+    expect(await screen.findByText(/Failed to load holdings:/i)).toBeInTheDocument();
   });
 });

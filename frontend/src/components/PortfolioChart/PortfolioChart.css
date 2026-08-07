@@ -56,7 +56,6 @@
 .chart-responsive-wrapper svg,
 .chart-responsive-wrapper canvas {
   max-width: 100%;
-  height: auto !important;
   display: block;
 }
 

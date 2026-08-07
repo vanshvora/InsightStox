@@ -67,12 +67,25 @@ export const DataPrivacy = () => {
         try {
             const res = await axios.get(
                 import.meta.env.VITE_BACKEND_LINK + "/users/portfolio/download/",
-                { withCredentials: true }
+                { 
+                    withCredentials: true,
+                    responseType: 'blob' // Important for downloading files
+                }
             );
-            console.log("Data download initiated:", res.data);
-            alert("Your data download should start shortly or be delivered via email.");
+            
+            // Create a temporary link to trigger the file download
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'portfolio_data.xlsx');
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            
+            console.log("Data download initiated");
         } catch (err) {
-            console.error("Error initiating data download:", err.response?.data?.message || err.message);
+            console.error("Error initiating data download:", err);
             alert("Data download failed. Please try again.");
         } finally {
             setDownloadRequested(false);
@@ -100,10 +113,10 @@ export const DataPrivacy = () => {
     useEffect(() => {
         const fetchDataPrivacySettings = async () => {
             try {
-                const res = await axios.get(import.meta.env.VITE_BACKEND_LINK + "/users/data-privacy/", { withCredentials: true });
-                const user = res.data?.data;
-                if (user && typeof user.aisuggestion !== 'undefined') {
-                    setAiToggle(user.aisuggestion);
+                const res = await axios.get(import.meta.env.VITE_BACKEND_LINK + "/users/preferences/", { withCredentials: true });
+                const userPrefs = res.data?.data;
+                if (userPrefs && typeof userPrefs.is_ai_suggestion_on !== 'undefined') {
+                    setAiToggle(userPrefs.is_ai_suggestion_on);
                 }
             } catch (err) {
                 console.error("Error fetching info:", err.response?.data?.message || err.message);
@@ -218,8 +231,7 @@ export const DataPrivacy = () => {
                     navigationLinks={[
                         { text: "Portfolio", href: "/portfolio" },
                         { text: "AI Insights", href: "/ai-insight" },
-                        { text: "Watchlist", href: "/watchlist" },
-                        { text: "Compare Stocks", href: "#" }
+                        { text: "Watchlist", href: "/watchlist" }
                     ]}
                     legalLinks={[
                         { text: "Privacy Policy", href: "#privacy" },

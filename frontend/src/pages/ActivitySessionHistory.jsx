@@ -330,8 +330,7 @@ export const ActivitySessionHistory = () => {
           navigationLinks={[
             { text: "Portfolio", href: "/portfolio" },
             { text: "AI Insights", href: "/ai-insight" },
-            { text: "Watchlist", href: "/watchlist" },
-            { text: "Compare Stocks", href: "#" },
+            { text: "Watchlist", href: "/watchlist" }
           ]}
           legalLinks={[
             { text: "Privacy Policy", href: "#privacy" },

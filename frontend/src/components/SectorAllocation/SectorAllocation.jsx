@@ -90,7 +90,7 @@ export default function SectorAllocationChart() {
 
   // Dynamic backend URL
   const BACKEND_URL = import.meta.env.VITE_BACKEND_LINK ;
-  const ALLOCATION_API = `${BACKEND_URL}/api/v1/dashboard/stockAllocation`;
+  const ALLOCATION_API = `${BACKEND_URL}/dashboard/allocation/`;
 
   // Fetch sector allocation from backend
   const fetchAllocationData = async () => {

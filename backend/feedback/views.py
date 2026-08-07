@@ -2,9 +2,11 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
+from rest_framework.permissions import IsAuthenticated
 from .models import UserQuery, UserSuggestion
 
 class SendQueryView(APIView):
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         query = request.data.get('query', '').strip()
         
@@ -23,6 +25,7 @@ class SendQueryView(APIView):
 
 
 class SendSuggestionView(APIView):
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         suggestion = request.data.get('suggestion', '').strip()
         

@@ -289,7 +289,7 @@ export const MyProfile = () => {
                             <div className="myPage_InvExp">
                                 <label>Investment Experience</label>
                                 <div className="myPage_InfValueDropDown1">
-                                    <select className="myPage_InvExpList" value={userDetails?.investmentExp} onChange={handleInvExp}>
+                                    <select className="myPage_InvExpList" value={userDetails?.investmentExp || ""} onChange={handleInvExp}>
                                         <option value="" disabled>Select an option</option>
                                         <option value="Beginner">Beginner</option>
                                         <option value="Intermediate">Intermediate</option>
@@ -302,7 +302,7 @@ export const MyProfile = () => {
                             <div className="myPage_RiskProfile">
                                 <label>Risk Profile</label>
                                 <div className="myPage_InfValueDropDown2">
-                                    <select className="myPage_RiskProfList" value={userDetails?.riskProfile} onChange={handleRiskProf}>
+                                    <select className="myPage_RiskProfList" value={userDetails?.riskProfile || ""} onChange={handleRiskProf}>
                                         <option value="" disabled>Select an option</option>
                                         <option value="Low - Conservative">Low - Conservative</option>
                                         <option value="Medium - Moderate">Medium - Moderate</option>
@@ -317,7 +317,7 @@ export const MyProfile = () => {
                             <div className="myPage_FinGoals">
                                 <label>Financial Goals</label>
                                 <div className="myPage_InfValueDropDown3">
-                                    <select className="myPage_FinGoalList" data-testid="myPage_FinGoalList" value={userDetails?.FinGoal} onChange={handleFinGoals}>
+                                    <select className="myPage_FinGoalList" data-testid="myPage_FinGoalList" value={userDetails?.FinGoal || ""} onChange={handleFinGoals}>
                                         <option value="" disabled>Select an option</option>
                                         <option value="Primary Growth">Primary growth</option>
                                         <option value="Income Generation">Income generation</option>
@@ -330,7 +330,7 @@ export const MyProfile = () => {
                             <div className="myPage_InvHorizon">
                                 <label>Investment Horizon</label>
                                 <div className="myPage_InfValueDropDown4">
-                                    <select className="myPage_InvHorizonList" value={userDetails?.InvHorizon} onChange={handleInvHorizon}>
+                                    <select className="myPage_InvHorizonList" value={userDetails?.InvHorizon || ""} onChange={handleInvHorizon}>
                                         <option value="" disabled>Select an option</option>
                                         <option value="Short-term (1-3 years)">Short-term (1-3 years)</option>
                                         <option value="Medium-term (3-10 years)">Medium-term (3-10 years)</option>
@@ -379,9 +379,7 @@ export const MyProfile = () => {
                     navigationLinks={[
                         { text: "Portfolio", href: "/portfolio" },
                         { text: "AI Insigths", href: "/ai-insight" },
-                        { text: "Wacthlist", href: "/watchlist" },
-                        { text: "Compare Stocks", href: "#" },
-
+                        { text: "Watchlist", href: "/watchlist" }
                     ]}
                     legalLinks={[
                         { text: "Privacy Policy", href: "#privacy" },

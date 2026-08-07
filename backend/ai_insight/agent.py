@@ -27,7 +27,7 @@ class AIAgent:
         # Models
         self.llm = ChatGroq(
             api_key=settings.GROQ_API_KEY,
-            model="llama-3.1-8b-instant",  # or "openai/gpt-oss-120b" depending on availability/needs
+            model="llama-3.3-70b-versatile",  # Upgraded model for better tool calling
             temperature=0,
             max_tokens=1500,
         )
@@ -69,15 +69,26 @@ class AIAgent:
             return "tools"
         return END
 
-    def invoke(self, message: str, user_email: str):
+    def invoke(self, message: str, user_email: str, history: list = None):
         """Invoke the agent with a user message."""
+        
+        # Build the message history
+        messages = []
+        if history:
+            from langchain_core.messages import AIMessage
+            for msg in history:
+                if msg.get('role') == 'user':
+                    messages.append(HumanMessage(content=msg.get('content', '')))
+                elif msg.get('role') == 'assistant':
+                    messages.append(AIMessage(content=msg.get('content', '')))
         
         # We append user_email to context so LLM knows how to call portfolio_analysis_tool
         context_msg = f"[System Context: The current user's email is {user_email}. If they ask about their portfolio, use this email.]\n\nUser: {message}"
+        messages.append(HumanMessage(content=context_msg))
         
         try:
             response = self.graph.invoke(
-                {"messages": [HumanMessage(content=context_msg)]},
+                {"messages": messages},
             )
             return response["messages"][-1].content
         except Exception as e:

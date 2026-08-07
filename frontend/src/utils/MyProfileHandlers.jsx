@@ -63,7 +63,7 @@ export const MyProfileHandlers = ({ setChangeInProfile, setUserDetails, setIsEdi
         if (confirmPass === newPass) {
             try {
                 setIsSendingOtp(true);
-                await axios.patch(import.meta.env.VITE_BACKEND_LINK + "/users/password/reset/", { password: currPass, newPassword: newPass }, { withCredentials: true });
+                await axios.patch(import.meta.env.VITE_BACKEND_LINK + "/users/password/reset/otp/", {}, { withCredentials: true });
                 setShowOtpModal(true);
                 setChangeInProfile(newPass);
                 setOtp("");
@@ -85,7 +85,7 @@ export const MyProfileHandlers = ({ setChangeInProfile, setUserDetails, setIsEdi
         if (resendCountdown > 0) return;
         try {
             setIsSendingOtp(true);
-            await axios.patch(import.meta.env.VITE_BACKEND_LINK + "/users/password/reset/", { password: currPass, newPassword: newPass }, { withCredentials: true });
+            await axios.patch(import.meta.env.VITE_BACKEND_LINK + "/users/password/reset/otp/", {}, { withCredentials: true });
             setResendCountdown(30);
         } catch (err) {
             //4
@@ -107,7 +107,7 @@ export const MyProfileHandlers = ({ setChangeInProfile, setUserDetails, setIsEdi
             await axios.post(import.meta.env.VITE_BACKEND_LINK + "/users/password/reset/verify/", { otp: otp }, { withCredentials: true });
             setShowOtpModal(false);
             setChangeInProfile(otp);
-            await axios.patch(import.meta.env.VITE_BACKEND_LINK + "/users/password/reset/", { newPassword: newPass }, { withCredentials: true });
+            await axios.patch(import.meta.env.VITE_BACKEND_LINK + "/users/password/reset/", { password: newPass }, { withCredentials: true });
             setIsEditingPass(false);
             setCurrPass("");
             setNewPass("");

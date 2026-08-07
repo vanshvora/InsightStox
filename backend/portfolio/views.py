@@ -13,11 +13,13 @@ from utils.price_store import price_store, currency_store
 # but we'll put it here logically, and link it in dashboard urls too for compatibility.
 
 class AddTransactionView(APIView):
+    permission_classes = [IsAuthenticated]
+    
     def post(self, request):
         symbol = request.data.get('symbol', '').upper()
         quantity = request.data.get('quantity')
         price = request.data.get('price')
-        t_type = request.data.get('type', '').upper()
+        t_type = request.data.get('type', request.data.get('transaction_type', '')).upper()
         
         if not symbol or not quantity or not price or not t_type:
             return Response({'success': False, 'message': 'Missing required fields'}, status=status.HTTP_400_BAD_REQUEST)
@@ -46,69 +48,62 @@ class PortfolioSummaryView(APIView):
         holdings = StockSummary.objects.filter(user=request.user, current_holding__gt=0).select_related('stock')
         
         if not holdings.exists():
-            return Response({'success': True, 'data': {
-                'totalInvestment': 0,
-                'currentValue': 0,
-                'totalReturn': 0,
-                'totalReturnPercent': 0,
-                'todayReturn': 0,
-                'todayReturnPercent': 0
-            }})
+            return Response({'success': True, 'summary': []})
             
         symbols = [h.stock.symbol for h in holdings]
         quotes = get_quotes(symbols)
         
-        # Create quote map
         quote_map = {q['symbol']: q for q in quotes if 'symbol' in q}
         
-        total_investment = Decimal('0.00')
-        current_value = Decimal('0.00')
-        today_return = Decimal('0.00')
+        total_portfolio_value = Decimal('0.00')
+        summary = []
         
         for holding in holdings:
             sym = holding.stock.symbol
-            currency = holding.stock.currency or 'USD'
-            exchange_rate = currency_store.get_rate(currency)
-            
             q = quote_map.get(sym, {})
-            current_price_str = q.get('price', 'N/A')
-            prev_close_str = q.get('previousClose', 'N/A')
             
             try:
-                current_price = float(current_price_str)
-                price_store.set(sym, current_price)
+                current_price = float(q.get('price', holding.avg_price))
             except:
                 current_price = float(holding.avg_price)
                 
-            try:
-                prev_close = float(prev_close_str)
-            except:
-                prev_close = current_price
-                
+            currency = holding.stock.currency or 'USD'
+            exchange_rate = currency_store.get_rate(currency)
             inr_price = current_price * exchange_rate
-            inr_prev = prev_close * exchange_rate
             
             val = holding.current_holding * Decimal(str(inr_price))
-            prev_val = holding.current_holding * Decimal(str(inr_prev))
+            total_portfolio_value += val
             
-            total_investment += holding.spent_amount * Decimal(str(exchange_rate))
-            current_value += val
-            today_return += (val - prev_val)
+            spent = holding.spent_amount if hasattr(holding, 'spent_amount') else holding.current_holding * Decimal(str(holding.avg_price))
+            total_spent_inr = spent * Decimal(str(exchange_rate))
             
-        total_return = current_value - total_investment
-        total_return_pct = (total_return / total_investment) * 100 if total_investment > 0 else 0
-        today_return_pct = (today_return / (current_value - today_return)) * 100 if (current_value - today_return) > 0 else 0
-        
-        data = {
-            'totalInvestment': float(total_investment.quantize(Decimal('0.01'))),
-            'currentValue': float(current_value.quantize(Decimal('0.01'))),
-            'totalReturn': float(total_return.quantize(Decimal('0.01'))),
-            'totalReturnPercent': float(Decimal(str(total_return_pct)).quantize(Decimal('0.01'))),
-            'todayReturn': float(today_return.quantize(Decimal('0.01'))),
-            'todayReturnPercent': float(Decimal(str(today_return_pct)).quantize(Decimal('0.01')))
-        }
-        
-        return Response({'success': True, 'data': data})
+            pl = val - total_spent_inr
+            pl_pct = (pl / total_spent_inr * 100) if total_spent_inr > 0 else 0
+            
+            summary.append({
+                'symbol': sym,
+                'marketCap': q.get('marketCap', 'N/A'),
+                'lastPrice': current_price,
+                'change': q.get('change', 0),
+                'changePercent': q.get('changePercent', 0),
+                'currency': currency,
+                'marketTime': q.get('marketTime', 'N/A'),
+                'volume': q.get('volume', 'N/A'),
+                'shares': float(holding.current_holding),
+                'dayRange': q.get('dayRange', 'N/A'),
+                'yearRange': q.get('fiftyTwoWeekRange', 'N/A'),
+                'totalValue': float(val.quantize(Decimal('0.01'))),
+                'profitLoss': float(pl.quantize(Decimal('0.01'))),
+                'profitLossPercentage': float(Decimal(str(pl_pct)).quantize(Decimal('0.01'))),
+                'allocationPercentage': 0
+            })
+            
+        for item in summary:
+            if total_portfolio_value > 0:
+                pct = (Decimal(str(item['totalValue'])) / total_portfolio_value) * 100
+                item['allocationPercentage'] = float(pct.quantize(Decimal('0.01')))
+                
+        return Response({'success': True, 'summary': summary})
 
 
 class PortfolioFundamentalsView(APIView):
@@ -120,7 +115,37 @@ class PortfolioFundamentalsView(APIView):
             return Response({'success': True, 'data': []})
             
         quotes = get_quotes(symbols)
-        return Response({'success': True, 'data': quotes})
+        quote_map = {q['symbol']: q for q in quotes if 'symbol' in q}
+        
+        results = []
+        for holding in holdings:
+            sym = holding.stock.symbol
+            q = quote_map.get(sym, {})
+            
+            q['currentHolding'] = float(holding.current_holding)
+            q['lastPrice'] = q.get('price', 'N/A')
+            
+            # Map extra fundamental fields that might not be in standard quotes
+            # yfinance info dict mapping
+            ticker = None
+            try:
+                import yfinance as yf
+                ticker = yf.Ticker(sym)
+                info = ticker.info
+                q['epsEstimateNextYear'] = info.get('epsEstimateNextYear', 'N/A')
+                q['divPaymentDate'] = info.get('dividendDate', 'N/A')
+                q['exDivDate'] = info.get('exDividendDate', 'N/A')
+                q['dividendPerShare'] = info.get('dividendRate', 'N/A')
+                q['forwardAnnualDivRate'] = info.get('dividendRate', 'N/A')
+                q['forwardAnnualDivYield'] = info.get('dividendYield', 'N/A')
+                q['trailingAnnualDivRate'] = info.get('trailingAnnualDividendRate', 'N/A')
+                q['trailingAnnualDivYield'] = info.get('trailingAnnualDividendYield', 'N/A')
+            except:
+                pass
+                
+            results.append(q)
+            
+        return Response({'success': True, 'data': results})
 
 
 class PortfolioHoldingsView(APIView):
@@ -139,15 +164,41 @@ class PortfolioHoldingsView(APIView):
             sym = holding.stock.symbol
             q = quote_map.get(sym, {})
             
+            try:
+                current_price = float(q.get('price', holding.avg_price))
+            except:
+                current_price = float(holding.avg_price)
+                
+            try:
+                prev_close = float(q.get('previousClose', current_price))
+            except:
+                prev_close = current_price
+                
+            shares = float(holding.current_holding)
+            avg_price = float(holding.avg_price)
+            total_cost = shares * avg_price
+            market_value = shares * current_price
+            
+            day_gain_val = (current_price - prev_close) * shares
+            day_gain_pct = ((current_price - prev_close) / prev_close * 100) if prev_close > 0 else 0
+            
+            total_gain_val = market_value - total_cost
+            total_gain_pct = (total_gain_val / total_cost * 100) if total_cost > 0 else 0
+            
             results.append({
                 'symbol': sym,
                 'name': holding.stock.short_name,
-                'quantity': float(holding.current_holding),
-                'avgPrice': float(holding.avg_price),
-                'currentPrice': q.get('price', 'N/A'),
-                'change': q.get('change', 'N/A'),
-                'changePercent': q.get('changePercent', 'N/A'),
-                'value': float(holding.current_holding * holding.avg_price) # Simplification
+                'status': 'Active',
+                'shares': round(shares, 2),
+                'lastPrice': round(current_price, 2),
+                'avgPrice': round(avg_price, 2),
+                'totalCost': round(total_cost, 2),
+                'marketValue': round(market_value, 2),
+                'dayGainValue': round(day_gain_val, 2),
+                'dayGainPercent': round(day_gain_pct, 2),
+                'totalGainValue': round(total_gain_val, 2),
+                'totalGainPercent': round(total_gain_pct, 2),
+                'realizedGain': float(holding.realized_gain)
             })
             
         return Response({'success': True, 'data': results})

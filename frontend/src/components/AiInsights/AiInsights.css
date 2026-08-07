@@ -1,11 +1,12 @@
 
 .insights-card {
   flex: 1;
-  min-height: 40px;
+  min-height: 250px;
   min-width: 710px;
-  max-width: 30%;
-  height: 500px;
+  max-width: 50%;
   border: 1px solid white;
+  display: flex;
+  flex-direction: column;
 }
 
 .ai-title {

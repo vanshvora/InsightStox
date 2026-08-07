@@ -3,24 +3,31 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .agent import agent
 
+from rest_framework.permissions import IsAuthenticated
+
 class SendMessageView(APIView):
+    permission_classes = [IsAuthenticated]
     def post(self, request):
-        message = request.data.get('message')
+        message_data = request.data.get('message')
         
-        if not message:
+        # In ChatWindow.jsx, message is sent as an object: {id, text, sender, screenWidth}
+        message_text = message_data.get('text') if isinstance(message_data, dict) else message_data
+        
+        if not message_text:
             return Response(
-                {'success': False, 'message': 'Message is required'}, 
+                {'success': False, 'message': 'Message text is required'}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
             
+        history = request.data.get('history', [])
+        
         try:
-            # We don't have long term memory persistence in this simple port yet,
-            # but it will handle the immediate message perfectly.
-            ai_response = agent.invoke(message, request.user.email)
+            # We pass the conversation history to the agent to provide context
+            ai_response = agent.invoke(message_text, request.user.email, history=history)
             
             return Response({
                 'success': True,
-                'data': ai_response
+                'reply': ai_response
             })
             
         except Exception as e:

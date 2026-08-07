@@ -29,7 +29,9 @@ export const AppProvider = ({ children }) => {
     // Check token by calling backend endpoint. Returns boolean.
     const checkToken = async () => {
         try {
-            const res = await axios.get(import.meta.env.VITE_BACKEND_LINK + "/users/token/check/");
+            const res = await axios.get(import.meta.env.VITE_BACKEND_LINK + "/users/token/check/", {
+                withCredentials: true
+            });
             return Boolean(res?.data?.success);
         } catch (err) {
             //console.error("checkToken error:", err);

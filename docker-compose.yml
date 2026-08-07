@@ -12,7 +12,7 @@ services:
       - ./backend:/app
       - /app/.venv
     env_file:
-      - .env
+      - ./backend/.env
     environment:
       - DEBUG=True
       - PYTHONUNBUFFERED=1
@@ -28,7 +28,7 @@ services:
       - ./frontend:/app
       - /app/node_modules
     env_file:
-      - .env
+      - ./frontend/.env
     environment:
       - CHOKIDAR_USEPOLLING=true # Helps with hot-reloading on Windows
     depends_on:

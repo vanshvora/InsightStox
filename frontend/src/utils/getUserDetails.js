@@ -9,9 +9,23 @@ export async function GetUserDetails(setUserDetails) {
         //console.log("User details fetched:", res.data);
         
         if (res.data.success) {
-            console.log("Setting user details:", res.data.data);
-            //console.log("Setting user details:", res.data.data.profileImage);
-            setUserDetails(res.data.data);
+            const d = res.data.data;
+            const mappedUser = {
+                id: d.id,
+                name: d.name,
+                email: d.email,
+                registrationMethod: d.registration_method,
+                investmentExp: d.investment_experience,
+                riskProfile: d.risk_profile,
+                FinGoal: d.financial_goals,
+                InvHorizon: d.investment_horizon,
+                profileImage: d.profile_image,
+                theme: d.theme,
+                dashboardLayout: d.dashboard_layout,
+                isAiSuggestionOn: d.is_ai_suggestion_on
+            };
+            console.log("Setting user details:", mappedUser);
+            setUserDetails(mappedUser);
 
         } else {
             console.error("Failed to fetch user details: success = false");

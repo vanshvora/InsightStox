@@ -22,13 +22,21 @@ class CookieTokenAuthentication(TokenAuthentication):
 
     def authenticate(self, request):
         # 1. Try to authenticate from the standard Authorization header first
-        auth_result = super().authenticate(request)
-        if auth_result is not None:
-            return auth_result
+        try:
+            auth_result = super().authenticate(request)
+            if auth_result is not None:
+                return auth_result
+        except exceptions.AuthenticationFailed:
+            pass  # Fall through to cookie auth
 
         # 2. If no header, check the 'auth_token' cookie
         token = request.COOKIES.get('auth_token')
         if not token:
             return None
             
-        return self.authenticate_credentials(token)
+        try:
+            return self.authenticate_credentials(token)
+        except exceptions.AuthenticationFailed:
+            # If the cookie token is invalid (stale), treat user as unauthenticated 
+            # rather than crashing the request with a 401 on AllowAny views.
+            return None

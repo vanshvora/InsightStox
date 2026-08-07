@@ -29,14 +29,10 @@ const Navbar = ({ darkMode, setDarkMode, pageType, profileData = {} }) => {
   const handleNavigation = (path) => {
     navigate(path);
   };
-  const handleLogout = async () => {
-        try{
-            await axios.post(import.meta.env.VITE_BACKEND_LINK + "/users/logout/", {}, {withCredentials: true});
-            navigate("/");
-        }
-        catch(err){
-            console.error("Error during logout:", err.response?.data?.message || err.message);
-        }
+  const handleLogout = () => {
+      axios.post(import.meta.env.VITE_BACKEND_LINK + "/users/logout/", {}, {withCredentials: true}).catch(e => console.error("Error during logout:", e));
+      if (typeof setUserDetails === 'function') setUserDetails(null);
+      window.location.href = "/";
   }
   function checkPageType(){
     if(pageType !== "/" && pageType !== "my-profile" && pageType !== "data-privacy" && pageType !== "preferences" && pageType !== "help-support" && pageType !== "activity"){
@@ -88,34 +84,28 @@ const Navbar = ({ darkMode, setDarkMode, pageType, profileData = {} }) => {
           ) : (
             <>
               <Link 
-                className={`navbar_btn ${location.pathname === "/dashboard" ? "active" : ""}`} 
+                className={`navbar_btn ${location.pathname.toLowerCase() === "/dashboard" ? "active" : ""}`} 
                 to="/dashboard"
               >
                 Dashboard
               </Link>
               <Link 
-                className={`navbar_btn ${location.pathname === "/portfolio" ? "active" : ""}`} 
+                className={`navbar_btn ${location.pathname.toLowerCase() === "/portfolio" ? "active" : ""}`} 
                 to="/portfolio"
               >
                 Portfolio
               </Link>
                 <Link 
-                className={`navbar_btn ${location.pathname === "/watchlist" ? "active" : ""}`} 
+                className={`navbar_btn ${location.pathname.toLowerCase() === "/watchlist" ? "active" : ""}`} 
                 to="/watchlist"
               >
                 Watchlist
               </Link>
               <Link 
-                className={`navbar_btn ${location.pathname === "/ai-insight" ? "active" : ""}`} 
+                className={`navbar_btn ${location.pathname.toLowerCase() === "/ai-insight" ? "active" : ""}`} 
                 to="/ai-insight"
               >
                 AI Insights
-              </Link>
-              <Link 
-                className={`navbar_btn ${location.pathname === "/compare-stocks" ? "active" : ""}`} 
-                to="#"
-              >
-                Compare Stocks
               </Link>
             </>
           )}
@@ -168,8 +158,7 @@ const Navbar = ({ darkMode, setDarkMode, pageType, profileData = {} }) => {
               <Link to="/dashboard"><li>Dashboard </li></Link>
               <Link to="/portfolio"><li>Portfolio</li></Link>
               <Link to="/watchlist"><li>Watchlist</li></Link>
-              <Link to="/ai-insight"><li>AI Insights</li></Link>
-              <Link to="#"><li className="lastli">Compare Stocks</li></Link>
+              <Link to="/ai-insight"><li className="lastli">AI Insights</li></Link>
              </ul>
               </div>
           )}

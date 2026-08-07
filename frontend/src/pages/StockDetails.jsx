@@ -57,11 +57,17 @@ export const StockDetails = () => {
     }, [navigate, ensureAuth]);
 
     const openAddModel = () => {
+        if (!stockData?.priceInfo?.currentPrice || stockData.priceInfo.currentPrice === "--") {
+            return;
+        }
         setModalAction("BUY");
         setShowModal(true);
     };
 
     const openRmvModel = () => {
+        if (!stockData?.priceInfo?.currentPrice || stockData.priceInfo.currentPrice === "--") {
+            return;
+        }
         setModalAction("SELL");
         setShowModal(true);
     };
@@ -73,7 +79,7 @@ export const StockDetails = () => {
     useEffect(() => {
         const getStockDetails = async () => {
             try {
-                const res = await axios.get(`${BASE_URL}/api/v1/dashBoard/stockDetails?ticker=${symbol}`,
+                const res = await axios.get(`${BASE_URL}/dashboard/stock-details/?ticker=${symbol}`,
                     { withCredentials: true });
 
                 const raw = res?.data.data || res.data;
@@ -157,7 +163,7 @@ export const StockDetails = () => {
 
     const handleWatchlist = async () => {
         try {
-            await axios.post(`${BASE_URL}/api/v1/dashBoard/addToWatchlist`, { symbol: symbol }, { withCredentials: true });
+            await axios.post(`${BASE_URL}/dashboard/watchlist/add/`, { symbol: symbol }, { withCredentials: true });
             Swal.fire({
                 toast: true,
                 position: "top",
@@ -180,7 +186,7 @@ export const StockDetails = () => {
     useEffect(() => {
         const getNews = async () => {
             try {
-                const news = await axios.get(`${BASE_URL}/api/v1/dashBoard/news/${symbol}`, { withCredentials: true });
+                const news = await axios.get(`${BASE_URL}/dashboard/news/${symbol}/`, { withCredentials: true });
                 setMarketData(news?.data?.news || news?.data);
             }
             catch (error) {
@@ -205,7 +211,7 @@ export const StockDetails = () => {
                     <button className="stk-add-watchlist" val="Add-w" onClick={handleWatchlist}>Add to watchlist</button>
                 </div>
 
-                {showModal && (
+                {showModal && stockData?.priceInfo && (
                     <StockAction
                         action={modalAction}
                         handler={setModalAction}
@@ -218,21 +224,25 @@ export const StockDetails = () => {
                 )}
 
                 <div className="stk-stock-price">
-                    <div className="stk-abs">{stockData.priceInfo?.currentPrice ?? stockData.priceInfo?.previousClose}</div>
+                    <div className="stk-abs">{stockData.priceInfo?.currentPrice ?? stockData.priceInfo?.previousClose ?? "--"}</div>
                     <div
                         className="stk-percentage"
                         data-testid="stk-percentage"
                         style={{
                             color:
-                                stockData?.priceInfo?.change > 0
+                                Number(stockData?.priceInfo?.change) > 0
                                     ? "#00C853"
-                                    : stockData?.priceInfo?.change < 0
+                                    : Number(stockData?.priceInfo?.change) < 0
                                         ? "#C81B00"
                                         : "#FFF",
                         }}
                     >
-                        {stockData?.priceInfo?.change > 0 ? `+${stockData?.priceInfo?.change}` : stockData?.priceInfo?.change} (
-                        {stockData?.priceInfo?.changePercentage > 0 ? `+${stockData?.priceInfo?.changePercentage}%` : `${stockData?.priceInfo?.changePercentage}%`})
+                        {Number(stockData?.priceInfo?.change) > 0
+                            ? `+${stockData?.priceInfo?.change}`
+                            : (stockData?.priceInfo?.change ?? "--")} (
+                        {Number(stockData?.priceInfo?.changePercentage) > 0
+                            ? `+${stockData?.priceInfo?.changePercentage}%`
+                            : `${stockData?.priceInfo?.changePercentage ?? "--"}%`})
                     </div>
                 </div>
                 <div className="stk-stock-detail-navbar">
@@ -557,9 +567,7 @@ export const StockDetails = () => {
                     navigationLinks={[
                         { text: "Portfolio", href: "/portfolio" },
                         { text: "AI Insigths", href: "/ai-insight" },
-                        { text: "Wacthlist", href: "/watchlist" },
-                        { text: "Compare Stocks", href: "#" },
-
+                        { text: "Watchlist", href: "/watchlist" }
                     ]}
                     legalLinks={[
                         { text: "Privacy Policy", href: "#privacy" },

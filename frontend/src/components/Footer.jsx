@@ -1,4 +1,5 @@
 import React, { useState,useEffect } from "react";
+import { Link } from "react-router-dom";
 import github_logo from "../assets/github_logo.png";
 import { PolicyModal } from "./PolicyModal";
 import { PrivacyPolicy } from './PrivacyPolicy';
@@ -59,7 +60,7 @@ const Footer = ({ darkMode ,navigationLinks=[],legalLinks=[] }) => {
             </div>
             {navigationLinks.map((link) => (
               <div key={link.text} className={`${link.className || "nav_link"}`}>
-                <a  href={link.href}>{link.text}</a>
+                <Link to={link.href}>{link.text}</Link>
               </div>
             ))}
           </div>
@@ -79,7 +80,7 @@ const Footer = ({ darkMode ,navigationLinks=[],legalLinks=[] }) => {
                 {link.text}
               </a>
               ) : (
-              <a href={link.href}>{link.text}</a>
+              <Link to={link.href}>{link.text}</Link>
           )}
           </div>
             ))}

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query';
 import './WatchList.css'
 import Navbar from '../components/Navbar.jsx'
 import { useAppContext } from "../context/AppContext.jsx";
@@ -8,7 +9,7 @@ import filterIcon from '../assets/filter-button.svg';
 import axios from "axios";
 import {useNavigate} from 'react-router-dom';
 const BACKEND_URL = import.meta.env.VITE_BACKEND_LINK;
-const Watchlist_API = `${BACKEND_URL}/api/v1/dashboard/displayWatchlist`;
+const Watchlist_API = `${BACKEND_URL}/dashboard/watchlist/`;
 
 
 const  Watchlist= () => {
@@ -19,38 +20,37 @@ const  Watchlist= () => {
   const [filteredData, setFilteredData] = useState([]);
   const [searchData, setSearchData] = useState([]);   
   const [isFiltersApplied, setIsFiltersApplied] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const isWatchlistEmpty = !isLoading && watchlistData.length === 0;
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
-
-
-  // Filter states
-  const fetchWatchlist = async () => {
-    try {
-      setIsLoading(true);
-      const res = await axios.get(Watchlist_API);
-      const data = res.data?.watchlist || [];
-
-      const formattedData = data.map((item) => ({
-        company: item.shortName,
+  const { data: queryData = [], isLoading, refetch: fetchWatchlist } = useQuery({
+    queryKey: ['watchlist'],
+    queryFn: async () => {
+      const res = await axios.get(Watchlist_API, { withCredentials: true });
+      const data = res.data?.data || [];
+      return data.map((item) => ({
+        company: item.name || item.shortName,
         symbol: item.symbol,
-        price: item.currentPrice,
-        change: item.currentchange,
-        changePercent: item.percentageChange,
-        sector:item.sector,
-        marketcap:item.marketcap
+        price: item.price || item.currentPrice,
+        change: item.change || item.currentchange,
+        changePercent: item.changePercent || item.percentageChange,
+        sector: item.sector || 'N/A',
+        marketcap: item.marketCap || item.marketcap
       }));
-      
-      setwatchlistData(formattedData);
-      setFilteredData(formattedData);
-      setSearchData(formattedData);
-    } catch (err) {
-      console.error("Error fetching watchlist:", err);
-    } finally {
-      setIsLoading(false);
     }
-  };
+  });
+  
+  const isWatchlistEmpty = !isLoading && watchlistData.length === 0;
+  useEffect(() => {
+    if (queryData && queryData.length > 0) {
+      setwatchlistData(queryData);
+      setFilteredData(queryData);
+      setSearchData(queryData);
+    } else if (queryData && queryData.length === 0) {
+      setwatchlistData([]);
+      setFilteredData([]);
+      setSearchData([]);
+    }
+  }, [queryData]);
   const handleRemoveStock= async (symbol) => {
     try{
       const updatedData = watchlistData.filter(stock => stock.symbol !== symbol);
@@ -59,7 +59,7 @@ const  Watchlist= () => {
       setwatchlistData(updatedData);
       setFilteredData(updatedFiltered);
       setSearchData(updatedSearch);
-      await axios.delete(`${BACKEND_URL}/dashboard/watchlist/remove/?symbol=${symbol}`);
+      await axios.delete(`${BACKEND_URL}/dashboard/watchlist/remove/?symbol=${symbol}`, { withCredentials: true });
     }
     catch(err){
       console.error("Error removing stock:", err);
@@ -113,10 +113,7 @@ const  Watchlist= () => {
           };
     },  [navigate, ensureAuth]);
 
-  useEffect(() => {
-    fetchWatchlist();
-  }, []);
-
+  // Removed empty fetchWatchlist useEffect since useQuery handles initial fetch
   const sectors = [
     'Technology / IT', 'Communication Services', 'Materials & Mining',
     'Consumer Cyclical', 'Consumer Defensive', 'Basic Materials',
@@ -338,14 +335,14 @@ const handleSearch = (value) => {
                         <span className="company-symbol">{stock.symbol}</span>
                       </td>
                       <td>
-                        <span className="price-cell">{stock.price.toFixed(2)}</span>
-                         <span className={`change-cell ${stock.change >= 0 ? 'change-positive' : 'change-negative'} change-cell-after`}>
-                          {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(2)} ({stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%)
+                        <span className="price-cell">{parseFloat(stock.price || 0).toFixed(2)}</span>
+                         <span className={`change-cell ${parseFloat(stock.change || 0) >= 0 ? 'change-positive' : 'change-negative'} change-cell-after`}>
+                          {parseFloat(stock.change || 0) >= 0 ? '+' : ''}{parseFloat(stock.change || 0).toFixed(2)} ({parseFloat(stock.changePercent || 0) >= 0 ? '+' : ''}{parseFloat(stock.changePercent || 0).toFixed(2)}%)
                         </span>
                       </td>
                       <td>
-                        <span className={`change-cell ${stock.change >= 0 ? 'change-positive' : 'change-negative'}`}>
-                          {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(2)} ({stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%)
+                        <span className={`change-cell ${parseFloat(stock.change || 0) >= 0 ? 'change-positive' : 'change-negative'}`}>
+                          {parseFloat(stock.change || 0) >= 0 ? '+' : ''}{parseFloat(stock.change || 0).toFixed(2)} ({parseFloat(stock.changePercent || 0) >= 0 ? '+' : ''}{parseFloat(stock.changePercent || 0).toFixed(2)}%)
                         </span>
                       </td>
                       <td>
@@ -618,8 +615,7 @@ const handleSearch = (value) => {
           navigationLinks={[
             { text: "Portfolio", href: "/portfolio" },
             { text: "AI Insights", href: "/ai-insight" },
-            { text: "Watchlist", href: "/watchlist" },
-            { text: "Compare Stocks", href: "#" },
+            { text: "Watchlist", href: "/watchlist" }
           ]}
           legalLinks={[
             { text: "Privacy Policy", href: "#privacy" },

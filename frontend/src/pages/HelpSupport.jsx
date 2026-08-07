@@ -40,7 +40,6 @@ const helpContent = {
         <ol>
           <li>Click My Portfolio → Add Stock → Enter stock name and quantity.</li>
           <li>Track your performance with live market data and visuals.</li>
-          <li>Use the Compare Stocks feature to evaluate new opportunities.</li>
           <li>Review diversification charts to maintain a balanced risk profile.</li>
         </ol>
         <p><strong>Tip:</strong> Keep updating your portfolio regularly to receive accurate insights.</p>
@@ -300,9 +299,7 @@ export const HelpSupport = () => {
                     navigationLinks={[
                         { text: "Portfolio", href: "/portfolio" },
                         { text: "AI Insights", href: "/ai-insight" },
-                        { text: "Watchlist", href: "/watchlist" },
-                        { text: "Compare Stocks", href: "#" },
-
+                        { text: "Watchlist", href: "/watchlist" }
                     ]}
                     legalLinks={[
                         { text: "Privacy Policy", href: "#privacy" },

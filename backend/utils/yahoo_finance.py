@@ -114,20 +114,25 @@ def get_quotes(symbols):
         return []
 
 
+import requests
+
 def search_stock(query):
-    """Search for stocks matching query (mocking yahooFinance.search)."""
-    # yfinance doesn't have a direct search method, we'll try to get quote directly
-    # or rely on an external API for proper search. For now, we'll attempt to fetch it directly.
+    """Search for stocks matching query using Yahoo Finance search API."""
     try:
-        ticker = yf.Ticker(query)
-        info = ticker.info
-        if 'symbol' in info:
+        url = f"https://query2.finance.yahoo.com/v1/finance/search?q={query}"
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(url, headers=headers, timeout=5)
+        
+        if response.status_code == 200:
+            data = response.json()
+            # The search API returns a list of quotes and news
             return {
-                'quotes': [map_stock_data(info)],
-                'news': ticker.news[:5] if hasattr(ticker, 'news') else []
+                'quotes': data.get('quotes', []),
+                'news': data.get('news', [])
             }
-    except:
-        pass
+    except Exception as e:
+        print(f"Error in search_stock: {e}")
+        
     return {'quotes': [], 'news': []}
 
 

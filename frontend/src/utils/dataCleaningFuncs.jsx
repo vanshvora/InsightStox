@@ -29,13 +29,32 @@ export const formatSmallNumber = (num) => {
     return val.toFixed(2);
 };
 
-export const formatDate = (isoString) => {
-    if (!isoString || isoString.startsWith('-')) return "--";
-    const date = new Date(isoString);
+export const formatDate = (value) => {
+    if (value === null || value === undefined || value === "") return "--";
+
+    // Yahoo sometimes returns epoch seconds/ms as a number
+    let date;
+    if (typeof value === "number") {
+        date = new Date(value > 1e12 ? value : value * 1000);
+    } else if (typeof value === "string") {
+        if (value.startsWith("-")) return "--";
+        // numeric string timestamp
+        if (/^\d+$/.test(value.trim())) {
+            const n = Number(value);
+            date = new Date(n > 1e12 ? n : n * 1000);
+        } else {
+            date = new Date(value);
+        }
+    } else {
+        date = new Date(value);
+    }
+
+    if (Number.isNaN(date.getTime())) return "--";
+
     return date.toLocaleDateString("en-US", {
         year: "numeric",
         month: "short",
-        day: "numeric"
+        day: "numeric",
     });
 };
 

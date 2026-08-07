@@ -2,9 +2,28 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Stock, StockSummary, UserTransaction
+from .models import Stock, StockSummary, UserTransaction, PortfolioValuationDaily
 from utils.yahoo_finance import get_quotes
 from utils.price_store import currency_store
+
+
+def _snapshot_portfolio_valuation(user):
+    """Persist today's portfolio value so the performance chart can show buy/sell jumps."""
+    try:
+        from dashboard.services import get_current_portfolio_valuation
+        val = get_current_portfolio_valuation(user)
+        today = timezone.now().date()
+        daily, _ = PortfolioValuationDaily.objects.get_or_create(
+            user=user,
+            date=today,
+            defaults={'portfolio_valuation': val},
+        )
+        daily.portfolio_valuation = val
+        daily.save(update_fields=['portfolio_valuation'])
+    except Exception:
+        # Chart history is best-effort; don't fail the trade if snapshot fails
+        pass
+
 
 def add_buy_transaction(user, symbol, quantity, price):
     """
@@ -59,7 +78,8 @@ def add_buy_transaction(user, symbol, quantity, price):
             summary.avg_price = new_spent / new_holding
             
         summary.save()
-        
+
+    _snapshot_portfolio_valuation(user)
     return True, "Buy transaction successful"
 
 
@@ -108,5 +128,6 @@ def add_sell_transaction(user, symbol, quantity, price):
             summary.avg_price = Decimal('0')
             
         summary.save()
-        
+
+    _snapshot_portfolio_valuation(user)
     return True, "Sell transaction successful"

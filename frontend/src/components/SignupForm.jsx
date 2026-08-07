@@ -133,7 +133,7 @@ const handleRegister = async () => {
     
     setIsOtpSent((prev)=>!prev);
     setUserLoggedIn(true);
-    navigate("/Dashboard");
+    navigate("/dashboard");
     } catch (err) {
           setTitleError(err.response.data.message);
         

@@ -91,7 +91,7 @@ const LoginForm = ({ toggleForm, resetFormStates: parentResetFormStates }) => {
 });
 
           setUserLoggedIn(true);
-          navigate("/Dashboard");
+          navigate("/dashboard");
         }catch(err){  
           console.log("Google login error:", err.response?.data?.message || err.message);
           if(err.response?.data?.message)
@@ -151,7 +151,7 @@ const LoginForm = ({ toggleForm, resetFormStates: parentResetFormStates }) => {
   customClass: { popup: "toast-login-success" }
 });
 
-            navigate("/Dashboard");
+            navigate("/dashboard");
         } catch (err) {
             if(err.response.data.message)
                 setTitleError(err.response.data.message);
@@ -242,7 +242,7 @@ const handleResetPassword = async () => {
         console.log("✅ Password reset successful:", res.data);
         
         setUserLoggedIn(true);
-        navigate("/Dashboard");
+        navigate("/dashboard");
     } catch (err) {
       if(err.response.data.message){
         setTitleError(err.response.data.message);

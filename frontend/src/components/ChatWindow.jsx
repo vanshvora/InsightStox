@@ -42,13 +42,19 @@ useEffect(() => {
         console.log("Screen Width:", screenWidth);
         const typingMsg = { id: "typing", text: "Bot is typing... ", sender: "bot", typing: true };
         const userMsg = {id:Date.now(),text, sender:"user",screenWidth: screenWidth};
+        const history = messages
+            .filter(msg => !msg.typing)
+            .map(msg => ({ role: msg.sender === 'user' ? 'user' : 'assistant', content: msg.text }));
+            
         setMessages((prev) => [...prev, userMsg, typingMsg]);
         try{
-                const res = await axios.post(import.meta.env.VITE_BACKEND_LINK + "/ai_insight/message/",{
-                message : userMsg,
-                withCredentials: true,
-            });
-                        console.log("AI Reply:", res.data.reply);
+                const res = await axios.post(import.meta.env.VITE_BACKEND_LINK + "/ai-insight/message/", {
+                    message: userMsg,
+                    history: history
+                }, {
+                    withCredentials: true
+                });
+                console.log("AI Reply:", res.data.reply);
                         // Render markdown (GFM) and allow safe raw HTML (tables) by
                         // enabling rehype-raw and configuring rehype-sanitize to permit
                         // table-related tags.
@@ -61,15 +67,7 @@ useEffect(() => {
                             }
                         };
 
-                        const replyText = (
-                            <ReactMarkDown
-                                remarkPlugins={[remarkGfm, remarkEmoji]}
-                                rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeOptions]]}
-                            >
-                                {res.data.reply}
-                            </ReactMarkDown>
-                        );
-            setMessages((prev) => [...prev.filter((msg)=>msg.id !== "typing"), { id: Date.now(), text: replyText, sender: 'bot' }]);
+            setMessages((prev) => [...prev.filter((msg)=>msg.id !== "typing"), { id: Date.now(), text: res.data.reply, sender: 'bot' }]);
             setIsLoading(false);
         }catch(err){
             console.error("Error sending message:", err);
@@ -99,7 +97,23 @@ useEffect(() => {
         <div className="chat-messages" style={chatStart ? {} : {display:"none"}}>
                 {messages.map((msg) => (
                     <div className={`chat-bubble ${msg.sender}-bubble ${msg.typing ? "typing" : ""}`} key={msg.id}>
-                        <div>{msg.text}</div>
+                        {msg.sender === 'bot' && !msg.typing ? (
+                            <ReactMarkDown
+                                remarkPlugins={[remarkGfm, remarkEmoji]}
+                                rehypePlugins={[rehypeRaw, [rehypeSanitize, {
+                                    tagNames: ['table','thead','tbody','tr','th','td','strong','em','p','ul','ol','li','a','blockquote','code','pre','h1','h2','h3','h4','h5','h6'],
+                                    attributes: {
+                                        a: ['href', 'title', 'target', 'rel'],
+                                        table: ['class'],
+                                        '*': ['class']
+                                    }
+                                }]]}
+                            >
+                                {msg.text}
+                            </ReactMarkDown>
+                        ) : (
+                            <div>{msg.text}</div>
+                        )}
                     </div>
                 ))}
                 <div ref={chatEndRef} />

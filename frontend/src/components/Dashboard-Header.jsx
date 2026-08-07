@@ -18,6 +18,7 @@ const DashboardHeader = ({ isWatchlistPage = false, onAddToWatchlist = null }) =
   const [error, setError] = useState(null);
   const [query, setQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [typingTimeout, setTypingTimeout] = useState(null);
   const navigate = useNavigate();
   const { isSearchActive, setIsSearchActive, headerStocks, setHeaderStocks, headerStocksTimestamp, setHeaderStocksTimestamp } = useAppContext();
@@ -57,6 +58,14 @@ const DashboardHeader = ({ isWatchlistPage = false, onAddToWatchlist = null }) =
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setQuery(value);
+    
+    if (value.trim().length > 0) {
+      setIsSearching(true);
+    } else {
+      setIsSearching(false);
+      setSearchResults([]);
+    }
+    
     // Clear previous timer
     if (typingTimeout) clearTimeout(typingTimeout);
 
@@ -73,28 +82,37 @@ const DashboardHeader = ({ isWatchlistPage = false, onAddToWatchlist = null }) =
     const fetchSearchResults = async (q) => {
       try {
         const res = await axios.get(`${BACKEND_URL}/dashboard/search/`, {
-          params: { ticker: q },
+          params: { query: q },
           withCredentials: true
         });
-        if (Array.isArray(res.data?.suggestions)) {
-          setSearchResults(res.data.suggestions);
-          console.log(res.data.suggestions)
+        if (Array.isArray(res.data?.data)) {
+          setSearchResults(res.data.data);
+          console.log(res.data.data)
         } else {
         setSearchResults([]);
         }
       } catch (err) {
         console.error('Search error:', err);
         setSearchResults([]);
+      } finally {
+        setIsSearching(false);
       }
     };
     
     const handleAddStock = async (e, symbol) => {
-      
       e.stopPropagation();
+      if (onAddToWatchlist) {
         await onAddToWatchlist(symbol);
-        setIsSearchActive(false);
-        setSearchResults([]);
-       setQuery('');
+      } else {
+        try {
+          await axios.post(`${BACKEND_URL}/dashboard/watchlist/add/`, { symbol }, { withCredentials: true });
+        } catch (err) {
+          console.error("Failed to add stock:", err);
+        }
+      }
+      setIsSearchActive(false);
+      setSearchResults([]);
+      setQuery('');
     };
 
   useEffect(() => {
@@ -152,37 +170,33 @@ const DashboardHeader = ({ isWatchlistPage = false, onAddToWatchlist = null }) =
         
         <div className="d-stock-display-container">
           {loading ? (
-            // ⭐ show skeletons while loading
-            <div className="d-stock-display-container">
-              {Array.from({ length: 3 }).map((_, idx) => (
-                <React.Fragment key={idx}>
-                  <div className="d-stock-info">
-                    <div className="d-stock-header">
-                      <span className="d-stock-name">
-                        <div className="skeleton skeleton-text medium"></div>
-                      </span>
+            Array.from({ length: 3 }).map((_, idx) => (
+              <React.Fragment key={idx}>
+                <div className="d-stock-info">
+                  <div className="d-stock-header">
+                    <span className="d-stock-name">
+                      <div className="skeleton skeleton-text medium"></div>
+                    </span>
 
-                      <span className="d-stock-exchange">
-                        <div className="skeleton skeleton-text very-short"></div>
-                      </span>
-                    </div>
-
-                    <div className="d-stock-details">
-                      <span className="d-stock-price">
-                        <div className="skeleton skeleton-text short"></div>
-                      </span>
-
-                      <span className="d-stock-change">
-                        <div className="skeleton skeleton-text short"></div>
-                      </span>
-                    </div>
+                    <span className="d-stock-exchange">
+                      <div className="skeleton skeleton-text very-short"></div>
+                    </span>
                   </div>
 
-                  {idx < 2 && <span className="divider">|</span>}
-                </React.Fragment>
-              ))}
-            </div>
+                  <div className="d-stock-details">
+                    <span className="d-stock-price">
+                      <div className="skeleton skeleton-text short"></div>
+                    </span>
 
+                    <span className="d-stock-change">
+                      <div className="skeleton skeleton-text short"></div>
+                    </span>
+                  </div>
+                </div>
+
+                {idx < 2 && <span className="divider">|</span>}
+              </React.Fragment>
+            ))
           ) : (<>
 
           {stocks.length > 0 ? (
@@ -260,10 +274,13 @@ const DashboardHeader = ({ isWatchlistPage = false, onAddToWatchlist = null }) =
             />
           </div>
           <div className="search-results">
-            {query.length > 0 && searchResults.length === 0 && (
+            {isSearching && (
+              <p className="no-results">Searching market data...</p>
+            )}
+            {!isSearching && query.length > 0 && searchResults.length === 0 && (
               <p className="no-results">No matching stocks found.</p>
             )}
-            {searchResults.length > 0 && (
+            {!isSearching && searchResults.length > 0 && (
               <ul className="results-list">
                 {searchResults.map((item) => (
                   <li

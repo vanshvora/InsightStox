@@ -45,7 +45,7 @@ body {
 
 @media (min-width: 1024px) {
   .main-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 2fr 3.5fr; /* 2 parts for brands, 3.5 parts for news */
   }
 }
 
@@ -162,10 +162,10 @@ body {
   }
 }
 
-
 @media (min-width: 640px) {
   .groups-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    /* Changed from 3 to 2 columns as requested (2x3 instead of 3x2) */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -231,4 +231,40 @@ body {
   cursor: pointer;
   padding: 0.5rem;              
   border-radius: 1.5rem;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  min-height: 220px;
+  margin-top: 1rem;
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  background: #000;
+  color: #a1a1aa;
+  font-size: 0.95rem;
+}
+
+.loading-spinner {
+  width: 28px;
+  height: 28px;
+  border: 2px solid rgba(0, 200, 83, 0.2);
+  border-top-color: #00c853;
+  border-radius: 50%;
+  animation: market-spin 0.8s linear infinite;
+}
+
+@keyframes market-spin {
+  to { transform: rotate(360deg); }
+}
+
+.market-movers-error,
+.empty-state {
+  color: #a1a1aa;
+  font-size: 0.9rem;
+  margin: 0.5rem 0 1rem;
 }

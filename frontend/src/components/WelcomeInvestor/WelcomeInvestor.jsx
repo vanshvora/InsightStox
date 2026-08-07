@@ -1,25 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import './WelcomeInvestor.css';
 import evaluation_icon from '../../assets/evaluation-icon.png';
 import totalvalue_icon from '../../assets/totalvalue-icon.png';
 import gain_icon from '../../assets/gain-icon.png';
 import overallgraph_icon from '../../assets/overallgraph-icon.png';
+import { getPortfolioRiskFromCaps } from '../../utils/dataCleaningFuncs.jsx';
 
 axios.defaults.withCredentials = true;
 
 //Centralized backend URLs
 const BASE_URL = import.meta.env.VITE_BACKEND_LINK;
-const API_URL = `${BASE_URL}/api/v1/dashboard/Valuation`;
+const API_URL = `${BASE_URL}/dashboard/valuation/`;
 const STOCKS_API = `${BASE_URL}/dashboard/market/active/`;
 const USER_API = `${BASE_URL}/users/profile/`;
+const PORTFOLIO_SUMMARY_API = `${BASE_URL}/portfolio/summary/`;
 
 const stockmapping = (stockData) => ({
-  name: stockData.shortName,
+  name: (stockData.name && stockData.name !== 'N/A' ? stockData.name : null) || 
+        (stockData.shortName && stockData.shortName !== 'N/A' ? stockData.shortName : null) || 
+        (stockData.longName && stockData.longName !== 'N/A' ? stockData.longName : null) || 
+        stockData.symbol,
   symbol: stockData.symbol,
   nse: stockData.exchange,
-  price: stockData.price,
+  price: stockData.price || stockData.currentPrice,
   change: stockData.change,
   changePercent: stockData.changePercent,
   isUp: parseFloat(stockData.changePercent) >= 0,
@@ -35,46 +41,20 @@ const PortfolioCard = ({ icon, title, value, details, valueColor }) => (
 );
 
 const TrendingStocks = () => {
-  const [stocksData, setStocksData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { data: stocksData = [], isLoading: loading, error: queryError } = useQuery({
+    queryKey: ['trendingStocks'],
+    queryFn: async () => {
+      const res = await axios.get(STOCKS_API);
+      return res.data.data?.map(stockmapping) || [];
+    }
+  });
+
+  const error = queryError ? 'Failed to load trending stocks from backend.' : null;
   const navigate = useNavigate();
 
   const handleOpenDetails = (symbol) => {
     navigate(`/stockdetails/${symbol}`);
   };
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function fetchTrendingStocks() {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const res = await axios.get(STOCKS_API);
-        if (!cancelled) {
-          const formatted = res.data.data?.map(stockmapping) || [];
-          setStocksData(formatted);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          console.error('Error fetching trending stocks:', err);
-          setError('Failed to load trending stocks from backend.');
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    fetchTrendingStocks();
-    const interval = setInterval(fetchTrendingStocks, 900000); // auto-refresh every 15min
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, []);
 
   return (
     <div className="trending-stocks-container">
@@ -109,68 +89,35 @@ const TrendingStocks = () => {
 
 // Main Dashboard Component
 const WelcomeInvestor = () => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [data, setData] = useState(null);
-  const [userName, setUserName] = useState('');
+  const { data = null, isLoading: loading, error: valuationError } = useQuery({
+    queryKey: ['dashboardValuation'],
+    queryFn: async () => {
+      const res = await axios.get(API_URL);
+      return res.data.data;
+    },
+    retry: false
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function fetchValuation() {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const res = await axios.get(API_URL);
-        if (!cancelled) setData(res.data);
-      } catch (err) {
-        const backendMsg = err.response?.data?.message;
-        if (backendMsg === 'No stock summary found for the user.') {
-          if (!cancelled) {
-            setData({
-              totalValuation: 0,
-              todayProfitLoss: 0,
-              todayProfitLosspercentage: 0,
-              overallProfitLoss: 0,
-              overallProfitLosspercentage: 0,
-            });
-          }
-        } else {
-          let errorMsg = 'Failed to load data.';
-          if (err.response?.status === 401) {
-            errorMsg = 'Session expired. Please login again.';
-          } 
-          else {
-            errorMsg = err.message;
-          }
-          if (!cancelled) setError(errorMsg);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+  const { data: userName = '' } = useQuery({
+    queryKey: ['userName'],
+    queryFn: async () => {
+      const res = await axios.get(USER_API);
+      const fullName = res.data.data.name || '';
+      return fullName.split(' ')[0];
     }
+  });
 
-    async function fetchUser() {
-      try {
-        const res = await axios.get(USER_API);
-        if (!cancelled) {
-          const fullName = res.data.data.name || '';
-          const firstName = fullName.split(' ')[0];
-          setUserName(firstName);
-        }
-      } catch (err) {
-        console.error('Error fetching user:', err);
-      }
-    }
+  const { data: portfolioSummary = [], isLoading: riskLoading } = useQuery({
+    queryKey: ['portfolioSummary'],
+    queryFn: async () => {
+      const res = await axios.get(PORTFOLIO_SUMMARY_API);
+      return res.data.summary || [];
+    },
+    retry: false
+  });
 
-    fetchValuation();
-    fetchUser();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const error = valuationError ? (valuationError.response?.status === 401 ? 'Session expired. Please login again.' : 'Failed to load data.') : null;
+  const portfolioRisk = getPortfolioRiskFromCaps(portfolioSummary);
 
   const formatCurrency = (amount) =>
     !amount || isNaN(amount)
@@ -211,18 +158,14 @@ const WelcomeInvestor = () => {
     {
       icon: evaluation_icon,
       title: 'Portfolio Risk',
-      value: loading
+      value: loading || riskLoading
         ? '---'
-        : parseFloat(data?.overallProfitLosspercentage) <= 0
-        ? 'High'
-        : parseFloat(data?.overallProfitLosspercentage) < 5
-        ? 'Moderate'
-        : 'Low',
-      valueColor: loading
+        : portfolioRisk,
+      valueColor: loading || riskLoading
         ? ''
-        : parseFloat(data?.overallProfitLosspercentage) <= 0
+        : portfolioRisk === 'Aggressive'
         ? 'text-negative'
-        : parseFloat(data?.overallProfitLosspercentage) < 5
+        : portfolioRisk === 'Moderate'
         ? 'text-neutral'
         : 'text-positive',
     },
