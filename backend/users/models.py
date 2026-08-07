@@ -30,7 +30,7 @@ class User(AbstractBaseUser):
     risk_profile = models.CharField(max_length=255, blank=True, null=True)
     financial_goals = models.CharField(max_length=255, blank=True, null=True)
     investment_horizon = models.CharField(max_length=255, blank=True, null=True)
-    profile_image = models.URLField(max_length=500, blank=True, null=True)
+    profile_image = models.URLField(max_length=2000, blank=True, null=True)
     theme = models.CharField(max_length=50, default='dark')
     dashboard_layout = models.CharField(max_length=50, blank=True, null=True)
     is_ai_suggestion_on = models.BooleanField(default=True)
