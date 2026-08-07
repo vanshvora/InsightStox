@@ -17,9 +17,9 @@ axios.defaults.withCredentials = true;
 const BASE_URL = import.meta.env.VITE_BACKEND_LINK;
 
 // Specific endpoints
-const MARKET_ACTIVE_API = `${BASE_URL}/api/v1/dashboard/marketActiveStocks`;
-const MARKET_GAINERS_API = `${BASE_URL}/api/v1/dashboard/marketGainers`;
-const MARKET_LOSERS_API = `${BASE_URL}/api/v1/dashboard/marketLosers`;
+const MARKET_ACTIVE_API = `${BASE_URL}/dashboard/market/active/`;
+const MARKET_GAINERS_API = `${BASE_URL}/dashboard/market/gainers/`;
+const MARKET_LOSERS_API = `${BASE_URL}/dashboard/market/losers/`;
 
 const StockListItem = ({ name,symbol, exchange, price, change, percentage, isGainer }) => {
   const changeColorClass = isGainer ? 'gainer' : 'loser';

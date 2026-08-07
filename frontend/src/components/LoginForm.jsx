@@ -73,7 +73,7 @@ const LoginForm = ({ toggleForm, resetFormStates: parentResetFormStates }) => {
 // Function to handle Google login
       const handleGoogleLogin = async (tokenResponse) => {
         try{
-          const res = await axios.post(import.meta.env.VITE_BACKEND_LINK + "/api/v1/users/googleLogin", {
+          const res = await axios.post(import.meta.env.VITE_BACKEND_LINK + "/users/login/google/", {
             access_token: tokenResponse.access_token},
             {withCredentials: true
           });
@@ -135,7 +135,7 @@ const LoginForm = ({ toggleForm, resetFormStates: parentResetFormStates }) => {
     const handleLogin = async () => {
         setIsLoading(true);
         try {
-            const res = await axios.post(import.meta.env.VITE_BACKEND_LINK+"/api/v1/users/login", {email : email.trim(), password : password.trim()}, {withCredentials: true});
+            const res = await axios.post(import.meta.env.VITE_BACKEND_LINK+"/users/login/", {email : email.trim(), password : password.trim()}, {withCredentials: true});
             console.log("✅ Logged in successfully:", res.data);
             setUserLoggedIn(true);
             Swal.fire({
@@ -166,7 +166,7 @@ const LoginForm = ({ toggleForm, resetFormStates: parentResetFormStates }) => {
 const handleSendOtpForForgotPassword = async () => {
   
   try{
-    const res = await axios.post(import.meta.env.VITE_BACKEND_LINK+"/api/v1/users/forgotPasswordOtpGeneration", {email : email.trim()}, {withCredentials: true});
+    const res = await axios.post(import.meta.env.VITE_BACKEND_LINK+"/users/password/forgot/otp/", {email : email.trim()}, {withCredentials: true});
     Swal.fire({
   toast: true,
   position: "top",
@@ -195,7 +195,7 @@ const handleSendOtpForForgotPassword = async () => {
 const handleOtpverificationForForgotPassword = async () => {
     setIsLoading(true);
 try{
-  const res = await axios.post(import.meta.env.VITE_BACKEND_LINK+"/api/v1/users/verifyOtp", {email : email.trim(), otp: otp.trim()}, {withCredentials: true});
+  const res = await axios.post(import.meta.env.VITE_BACKEND_LINK+"/users/password/forgot/verify/", {email : email.trim(), otp: otp.trim()}, {withCredentials: true});
     Swal.fire({
   toast: true,
   position: "top",
@@ -224,7 +224,7 @@ try{
 const handleResetPassword = async () => {
     setIsLoading(true);
     try{
-        const res = await axios.patch(import.meta.env.VITE_BACKEND_LINK+"/api/v1/users/setNewPassword", {email : email.trim(), newPassword : newPassword.trim()}, {withCredentials: true});
+        const res = await axios.patch(import.meta.env.VITE_BACKEND_LINK+"/users/password/forgot/reset/", {email : email.trim(), newPassword : newPassword.trim()}, {withCredentials: true});
         Swal.fire({
   toast: true,
   position: "top",

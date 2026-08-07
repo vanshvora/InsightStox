@@ -61,7 +61,7 @@ export const ActivitySessionHistory = () => {
     const fetchAllData = async () => {
       try {
         // 1️⃣ Fetch Profile + Embedded Alerts & Activities
-        const profileRes = await axios.get(`${BASE}/api/v1/users/myProfile`, { withCredentials: true });
+        const profileRes = await axios.get(`${BASE}/users/profile/`, { withCredentials: true });
         const user = profileRes.data?.data;
         const history = profileRes.data?.history;
 
@@ -94,7 +94,7 @@ export const ActivitySessionHistory = () => {
         }
 
         // 2️⃣ Fetch Active Sessions
-        const sessionRes = await axios.get(`${BASE}/api/v1/users/activityAndSessionHistory`, { withCredentials: true });
+        const sessionRes = await axios.get(`${BASE}/users/activity/`, { withCredentials: true });
         const sessions = sessionRes.data?.activeSessions;
 
         if (sessions) {
@@ -110,7 +110,7 @@ export const ActivitySessionHistory = () => {
         }
 
         // 3️⃣ Fetch All Security Alerts (Full)
-        const alertsRes = await axios.get(`${BASE}/api/v1/users/getAllSecurityAlerts`, { withCredentials: true });
+        const alertsRes = await axios.get(`${BASE}/users/security-alerts/`, { withCredentials: true });
         const alerts = alertsRes.data?.alerts;
 
         if (alerts) {
@@ -124,7 +124,7 @@ export const ActivitySessionHistory = () => {
         }
 
         // 4️⃣ Fetch Full Activity History
-        const activityRes = await axios.get(`${BASE}/api/v1/users/getAllActivityHistory`, { withCredentials: true });
+        const activityRes = await axios.get(`${BASE}/users/activity/all/`, { withCredentials: true });
         const activities = activityRes.data?.history;
 
         if (activities) {
@@ -151,7 +151,7 @@ export const ActivitySessionHistory = () => {
     setActiveSessions((prev) => prev.filter((s) => s.id !== sessionId));
 
     try {
-      await axios.post(`${BASE}/api/v1/users/logoutSession`, { token: sessionId }, { withCredentials: true });
+      await axios.post(`${BASE}/users/logout/session/`, { token: sessionId }, { withCredentials: true });
     } catch (err) {
       console.error("Error signing out:", err);
     }
@@ -162,7 +162,7 @@ export const ActivitySessionHistory = () => {
     setActiveSessions([]);
 
     try {
-      await axios.post(`${BASE}/api/v1/users/logoutAllSessions`, {}, { withCredentials: true });
+      await axios.post(`${BASE}/users/logout/all/`, {}, { withCredentials: true });
     } catch (err) {
       console.error("Error signing out all:", err);
     }
@@ -171,7 +171,7 @@ export const ActivitySessionHistory = () => {
   // Download Activity
   const handleDownloadActivity = async () => {
     try {
-      await axios.get(`${BASE}/api/v1/users/downloadActivityHistoryReport`, { withCredentials: true });
+      await axios.get(`${BASE}/users/activity/download/`, { withCredentials: true });
     } catch (err) {
       console.error("Error downloading report:", err);
     }
@@ -183,7 +183,7 @@ export const ActivitySessionHistory = () => {
     updateRecentActivitiesData([]);
 
     try {
-      await axios.delete(`${BASE}/api/v1/users/clearActivityHistory`, { withCredentials: true });
+      await axios.delete(`${BASE}/users/activity/clear/`, { withCredentials: true });
     } catch (err) {
       console.error("Error clearing history:", err);
     }

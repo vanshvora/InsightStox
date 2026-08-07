@@ -12,8 +12,8 @@ axios.defaults.withCredentials = true;
 //Centralized backend URLs
 const BASE_URL = import.meta.env.VITE_BACKEND_LINK;
 const API_URL = `${BASE_URL}/api/v1/dashboard/Valuation`;
-const STOCKS_API = `${BASE_URL}/api/v1/dashboard/marketActiveStocks`;
-const USER_API = `${BASE_URL}/api/v1/users/myProfile`;
+const STOCKS_API = `${BASE_URL}/dashboard/market/active/`;
+const USER_API = `${BASE_URL}/users/profile/`;
 
 const stockmapping = (stockData) => ({
   name: stockData.shortName,

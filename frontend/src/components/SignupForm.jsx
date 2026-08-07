@@ -58,7 +58,7 @@ const handleOtpGeneration = async () => {
     setIsLoading(true);
     setAreAllFieldsValid(false);
     try {
-        const res = await axios.post(import.meta.env.VITE_BACKEND_LINK+"/api/v1/users/registerOtpGeneration", {email : email.trim(), name: name.trim(), password : password.trim()}, {withCredentials: true});
+        const res = await axios.post(import.meta.env.VITE_BACKEND_LINK+"/users/register/otp/", {email : email.trim(), name: name.trim(), password : password.trim()}, {withCredentials: true});
         Swal.fire({
           toast: true,
           position: "top",
@@ -89,7 +89,7 @@ const handleOtpGeneration = async () => {
   const handleResendOtpGeneration = async () => {
     // setIsLoading(true);
     try {
-        const res = await axios.post(import.meta.env.VITE_BACKEND_LINK+"/api/v1/users/registerOtpGeneration", {email : email.trim(), name: name.trim(), password : password.trim()}, {withCredentials: true});
+        const res = await axios.post(import.meta.env.VITE_BACKEND_LINK+"/users/register/otp/", {email : email.trim(), name: name.trim(), password : password.trim()}, {withCredentials: true});
         Swal.fire({
           toast: true,
           position: "top",
@@ -116,7 +116,7 @@ const handleOtpGeneration = async () => {
 const handleRegister = async () => {
     setIsLoading(true);
    try {
-    const res = await axios.post(import.meta.env.VITE_BACKEND_LINK+"/api/v1/users/register", {email : email.trim(), otp: otp.trim()}, {withCredentials: true});
+    const res = await axios.post(import.meta.env.VITE_BACKEND_LINK+"/users/register/", {email : email.trim(), otp: otp.trim()}, {withCredentials: true});
     console.log("✅ Registered successfully:", res.data);
     Swal.fire({
       toast: true,

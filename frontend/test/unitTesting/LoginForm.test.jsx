@@ -301,7 +301,7 @@ test("Google login button triggers login flow", async () => {
 
     // Ensure axios posted to backend with token
     expect(axios.post).toHaveBeenCalledWith(
-      expect.stringContaining("/api/v1/users/googleLogin"),
+      expect.stringContaining("/users/login/google/"),
       { access_token: "mock_token_123" },
       { withCredentials: true }
     );
@@ -330,7 +330,7 @@ test("Google login backend failure displays backend error message", async () => 
 
   // Backend API attempted
   expect(axios.post).toHaveBeenCalledWith(
-    expect.stringContaining("/api/v1/users/googleLogin"),
+    expect.stringContaining("/users/login/google/"),
     { access_token: "mock_token_123" },
     { withCredentials: true }
   );
@@ -488,7 +488,7 @@ test("handleLogin success redirects to Dashboard and sets userLoggedIn", async (
 
   // Backend should be called
   expect(axios.post).toHaveBeenCalledWith(
-    expect.stringContaining("/api/v1/users/login"),
+    expect.stringContaining("/users/login/"),
     { email: "user@example.com", password: "password123" },
     { withCredentials: true }
   );

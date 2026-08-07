@@ -3,7 +3,7 @@ import axios from "axios";
 // ✅ Fixed: Accept setUserDetails as a parameter instead of using hook inside function
 export async function GetUserDetails(setUserDetails) {
     try {
-        const res = await axios.get(import.meta.env.VITE_BACKEND_LINK + "/api/v1/users/myProfile", {
+        const res = await axios.get(import.meta.env.VITE_BACKEND_LINK + "/users/profile/", {
             withCredentials: true,
         });
         //console.log("User details fetched:", res.data);

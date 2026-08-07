@@ -367,7 +367,7 @@ test("calls logout API and navigates to home on successful logout", async () => 
   // Assert: axios.post was called with the expected logout URL (or contains path)
   await waitFor(() => expect(axios.post).toHaveBeenCalled());
   expect(axios.post).toHaveBeenCalledWith(
-    expect.stringContaining("/api/v1/users/logout"),
+    expect.stringContaining("/users/logout/"),
     expect.any(Object) // component passes { withCredentials: true } as payload
   );
 

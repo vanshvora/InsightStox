@@ -33,7 +33,7 @@ export const Sidebar = ({ primaryData = {} }) => {
 
     const handleLogout = async () => {
         try {
-            await axios.post(import.meta.env.VITE_BACKEND_LINK + "/api/v1/users/logout", {}, { withCredentials: true });
+            await axios.post(import.meta.env.VITE_BACKEND_LINK + "/users/logout/", {}, { withCredentials: true });
             localStorage.removeItem("activeMenu");
             navigate("/");
         }

@@ -52,7 +52,7 @@ export const Portfolio = () => {
     useEffect(() => {
         const getUserPortfolio = async () => {
             try {
-                const res = await axios.get(`${BASE_URL}/api/v1/dashBoard/Valuation`, { withCredentials: true });
+                const res = await axios.get(`${BASE_URL}/dashboard/valuation/`, { withCredentials: true });
                 const raw = res.data;
                 
                 console.log("User portfolio data:", raw);
@@ -69,7 +69,7 @@ export const Portfolio = () => {
     useEffect(() => {
         const getPortfolioSummary = async () => {
             try {
-                const res = await axios.get(`${BASE_URL}/api/v1/portfolio/portfolioSummary`, { withCredentials: true });
+                const res = await axios.get(`${BASE_URL}/portfolio/summary/`, { withCredentials: true });
                 const summary = res.data.summary;
 
                 if(summary){
@@ -101,7 +101,7 @@ export const Portfolio = () => {
     useEffect(() => {
         const getPortfolioHoldings = async () => {
             try {
-                const res = await axios.get(`${BASE_URL}/api/v1/portfolio/portfolioHoldings`, { withCredentials: true });
+                const res = await axios.get(`${BASE_URL}/portfolio/holdings/`, { withCredentials: true });
                 const data  = res.data.data;
 
                 console.log("Portfolio Holdings:", data);
@@ -120,7 +120,7 @@ export const Portfolio = () => {
     useEffect(() => {
         const getPortfolioFundamentals = async () => {
             try {
-                const res = await axios.get(`${BASE_URL}/api/v1/portfolio/portfolioFundamentals`, { withCredentials: true });
+                const res = await axios.get(`${BASE_URL}/portfolio/fundamentals/`, { withCredentials: true });
                 const data = res.data.data;
                 
                 if(data){

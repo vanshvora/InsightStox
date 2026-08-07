@@ -74,7 +74,7 @@ const AiInsights = () => {
 
 const handlePortfolioAnalysis = async () => {
         try{
-          const res = await axios.get(import.meta.env.VITE_BACKEND_LINK + "/api/v1/dashBoard/getPortfolioInsight",{withCredentials: true});
+          const res = await axios.get(import.meta.env.VITE_BACKEND_LINK + "/dashboard/allocation/",{withCredentials: true});
           console.log("AiInsights component mounted",res.data.reply);
           if(res.data.reply.statusCode === 400){
             // console.error("Error in response:", res.data.reply.message);

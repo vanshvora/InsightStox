@@ -44,7 +44,7 @@ useEffect(() => {
         const userMsg = {id:Date.now(),text, sender:"user",screenWidth: screenWidth};
         setMessages((prev) => [...prev, userMsg, typingMsg]);
         try{
-                const res = await axios.post(import.meta.env.VITE_BACKEND_LINK + "/api/v1/ai-insight/sendMessage",{
+                const res = await axios.post(import.meta.env.VITE_BACKEND_LINK + "/ai_insight/message/",{
                 message : userMsg,
                 withCredentials: true,
             });

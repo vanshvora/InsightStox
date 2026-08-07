@@ -61,7 +61,7 @@ export default function PortfolioChart() {
   axios.defaults.withCredentials = true;
 
   const BACKEND_URL = import.meta.env.VITE_BACKEND_LINK;
-  const VALUATION_API = `${BACKEND_URL}/api/v1/dashboard/userPortfolioValuation`;
+  const VALUATION_API = `${BACKEND_URL}/dashboard/portfolio-valuation/`;
 
   // Dynamic Chart.js Options Based on Range
   const options = useMemo(() => {

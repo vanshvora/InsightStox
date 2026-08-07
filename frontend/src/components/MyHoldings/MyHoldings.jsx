@@ -4,7 +4,7 @@ import "./MyHoldings.css";
 import {Link} from 'react-router-dom'
 //Base backend URL
 const BACKEND_URL = import.meta.env.VITE_BACKEND_LINK;
-const HOLDINGS_API = `${BACKEND_URL}/api/v1/dashboard/stockSummary`;
+const HOLDINGS_API = `${BACKEND_URL}/dashboard/stock-summary/`;
 
 const MyHoldings = () => {
   const [holdings, setHoldings] = useState([]);

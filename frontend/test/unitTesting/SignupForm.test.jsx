@@ -262,7 +262,7 @@ test("OTP page: verify OTP works correctly when user enters OTP", async () => {
   await user.click(verifyBtn);
 
   expect(axios.post).toHaveBeenLastCalledWith(
-    expect.stringContaining("/api/v1/users/register"),
+    expect.stringContaining("/users/register/"),
     { email: "john@example.com", otp: "123456" },
     { withCredentials: true }
   );

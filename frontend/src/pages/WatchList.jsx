@@ -59,7 +59,7 @@ const  Watchlist= () => {
       setwatchlistData(updatedData);
       setFilteredData(updatedFiltered);
       setSearchData(updatedSearch);
-      await axios.delete(`${BACKEND_URL}/api/v1/dashboard/removeFromWatchlist?symbol=${symbol}`);
+      await axios.delete(`${BACKEND_URL}/dashboard/watchlist/remove/?symbol=${symbol}`);
     }
     catch(err){
       console.error("Error removing stock:", err);
@@ -70,7 +70,7 @@ const  Watchlist= () => {
   const handleAddToWatchlist = async (symbol) => {
     try {
       const res = await axios.post(
-        `${BACKEND_URL}/api/v1/dashboard/addToWatchlist`,
+        `${BACKEND_URL}/dashboard/watchlist/add/`,
         { symbol },
         { withCredentials: true }
       );

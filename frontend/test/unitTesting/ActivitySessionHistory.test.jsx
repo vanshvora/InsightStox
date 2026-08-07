@@ -154,7 +154,7 @@ describe("ActivitySessionHistory — FULL 100% Coverage", () => {
 
     await waitFor(() =>
       expect(mockPost).toHaveBeenCalledWith(
-        "http://localhost:8000/api/v1/users/logoutSession",
+        "http://localhost:8000/users/logout/session/",
         { token: "s1" },
         { withCredentials: true }
       )
@@ -196,7 +196,7 @@ describe("ActivitySessionHistory — FULL 100% Coverage", () => {
 
     await waitFor(() =>
       expect(mockPost).toHaveBeenCalledWith(
-        "http://localhost:8000/api/v1/users/logoutAllSessions",
+        "http://localhost:8000/users/logout/all/",
         {},
         { withCredentials: true }
       )
@@ -271,7 +271,7 @@ describe("ActivitySessionHistory — FULL 100% Coverage", () => {
 
     await waitFor(() =>
       expect(mockGet).toHaveBeenCalledWith(
-        "http://localhost:8000/api/v1/users/downloadActivityHistoryReport",
+        "http://localhost:8000/users/activity/download/",
         { withCredentials: true }
       )
     );
@@ -314,7 +314,7 @@ describe("ActivitySessionHistory — FULL 100% Coverage", () => {
 
     await waitFor(() =>
       expect(mockDelete).toHaveBeenCalledWith(
-        "http://localhost:8000/api/v1/users/clearActivityHistory",
+        "http://localhost:8000/users/activity/clear/",
         { withCredentials: true }
       )
     );

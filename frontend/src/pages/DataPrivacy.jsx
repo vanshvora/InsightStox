@@ -48,7 +48,7 @@ export const DataPrivacy = () => {
             setDeleteRequested(true);
             try {
                 await axios.delete(
-                    import.meta.env.VITE_BACKEND_LINK + "/api/v1/users/deleteAccount",
+                    import.meta.env.VITE_BACKEND_LINK + "/users/account/",
                     { withCredentials: true }
                 );
                 alert("Account deletion initiated. You will be logged out shortly.");
@@ -66,7 +66,7 @@ export const DataPrivacy = () => {
         setDownloadRequested(true);
         try {
             const res = await axios.get(
-                import.meta.env.VITE_BACKEND_LINK + "/api/v1/users/downloadPortfolioData",
+                import.meta.env.VITE_BACKEND_LINK + "/users/portfolio/download/",
                 { withCredentials: true }
             );
             console.log("Data download initiated:", res.data);
@@ -85,7 +85,7 @@ export const DataPrivacy = () => {
 
         try {
             await axios.patch(
-                import.meta.env.VITE_BACKEND_LINK + "/api/v1/users/toggleAiSuggestion",
+                import.meta.env.VITE_BACKEND_LINK + "/users/preferences/ai-suggestion/",
                 { aisuggestion: checked },
                 { withCredentials: true }
             );
@@ -100,7 +100,7 @@ export const DataPrivacy = () => {
     useEffect(() => {
         const fetchDataPrivacySettings = async () => {
             try {
-                const res = await axios.get(import.meta.env.VITE_BACKEND_LINK + "/api/v1/users/getDataAndPrivacy", { withCredentials: true });
+                const res = await axios.get(import.meta.env.VITE_BACKEND_LINK + "/users/data-privacy/", { withCredentials: true });
                 const user = res.data?.data;
                 if (user && typeof user.aisuggestion !== 'undefined') {
                     setAiToggle(user.aisuggestion);

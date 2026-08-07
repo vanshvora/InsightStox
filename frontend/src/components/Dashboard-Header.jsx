@@ -10,7 +10,7 @@ axios.defaults.withCredentials = true;
 
 //Backend API URL
 const BACKEND_URL = import.meta.env.VITE_BACKEND_LINK;
-const STOCK_API = `${BACKEND_URL}/api/v1/dashboard/starter`;
+const STOCK_API = `${BACKEND_URL}/dashboard/starter/`;
 
 const DashboardHeader = ({ isWatchlistPage = false, onAddToWatchlist = null }) => {
   const [stocks, setStocks] = useState([]);
@@ -72,7 +72,7 @@ const DashboardHeader = ({ isWatchlistPage = false, onAddToWatchlist = null }) =
     };
     const fetchSearchResults = async (q) => {
       try {
-        const res = await axios.get(`${BACKEND_URL}/api/v1/dashboard/searchStock`, {
+        const res = await axios.get(`${BACKEND_URL}/dashboard/search/`, {
           params: { ticker: q },
           withCredentials: true
         });

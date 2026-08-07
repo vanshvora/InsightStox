@@ -115,7 +115,7 @@ const handleContactSubmit = async (event) => {
     if (!contactMessage.trim()) return alert('Please enter a message.');
     
     try {
-      const response = await axios.post(import.meta.env.VITE_BACKEND_LINK + "/api/v1/users/sendUserQuery", 
+      const response = await axios.post(import.meta.env.VITE_BACKEND_LINK + "/feedback/query/", 
       {query:contactMessage},
       {withCredentials:true}
     );
@@ -142,7 +142,7 @@ const handleFeedbackSubmit = async (event) => {
     if (!feedbackMessage.trim()) return alert('Please enter a feedback.');
     
     try {
-      const response = await axios.post(import.meta.env.VITE_BACKEND_LINK + "/api/v1/users/sendUserSuggestion", 
+      const response = await axios.post(import.meta.env.VITE_BACKEND_LINK + "/feedback/suggestion/", 
         {
           suggestion:feedbackMessage
         },

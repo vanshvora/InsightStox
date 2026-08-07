@@ -19,7 +19,7 @@ export const MyProfileHandlers = ({ setChangeInProfile, setUserDetails, setIsEdi
             picData.append("profileImage", filePath);
 
             try {
-                await axios.patch(import.meta.env.VITE_BACKEND_LINK + "/api/v1/users/updateProfileImage", picData,
+                await axios.patch(import.meta.env.VITE_BACKEND_LINK + "/users/profile/image/", picData,
                     { withCredentials: true, headers: { "Content-Type": "multipart/form-data" }, });
                 setChangeInProfile(picData);
                 setIsEditingInfo(false);
@@ -42,7 +42,7 @@ export const MyProfileHandlers = ({ setChangeInProfile, setUserDetails, setIsEdi
         console.log("Valid Name", editedName);
         if (testName) {
             try {
-                await axios.patch(import.meta.env.VITE_BACKEND_LINK + "/api/v1/users/updateProfileName", { name: editedName.trim() }, { withCredentials: true });
+                await axios.patch(import.meta.env.VITE_BACKEND_LINK + "/users/profile/name/", { name: editedName.trim() }, { withCredentials: true });
                 setChangeInProfile(editedName);
                 setIsEditingInfo(false);
 
@@ -63,7 +63,7 @@ export const MyProfileHandlers = ({ setChangeInProfile, setUserDetails, setIsEdi
         if (confirmPass === newPass) {
             try {
                 setIsSendingOtp(true);
-                await axios.patch(import.meta.env.VITE_BACKEND_LINK + "/api/v1/users/resetPassword", { password: currPass, newPassword: newPass }, { withCredentials: true });
+                await axios.patch(import.meta.env.VITE_BACKEND_LINK + "/users/password/reset/", { password: currPass, newPassword: newPass }, { withCredentials: true });
                 setShowOtpModal(true);
                 setChangeInProfile(newPass);
                 setOtp("");
@@ -85,7 +85,7 @@ export const MyProfileHandlers = ({ setChangeInProfile, setUserDetails, setIsEdi
         if (resendCountdown > 0) return;
         try {
             setIsSendingOtp(true);
-            await axios.patch(import.meta.env.VITE_BACKEND_LINK + "/api/v1/users/resetPassword", { password: currPass, newPassword: newPass }, { withCredentials: true });
+            await axios.patch(import.meta.env.VITE_BACKEND_LINK + "/users/password/reset/", { password: currPass, newPassword: newPass }, { withCredentials: true });
             setResendCountdown(30);
         } catch (err) {
             //4
@@ -104,10 +104,10 @@ export const MyProfileHandlers = ({ setChangeInProfile, setUserDetails, setIsEdi
 
         try {
             setIsVerifyingOtp(true);
-            await axios.post(import.meta.env.VITE_BACKEND_LINK + "/api/v1/users/verifyOtpForProfile", { otp: otp }, { withCredentials: true });
+            await axios.post(import.meta.env.VITE_BACKEND_LINK + "/users/password/reset/verify/", { otp: otp }, { withCredentials: true });
             setShowOtpModal(false);
             setChangeInProfile(otp);
-            await axios.patch(import.meta.env.VITE_BACKEND_LINK + "/api/v1/users/setNewPasswordForProfile", { newPassword: newPass }, { withCredentials: true });
+            await axios.patch(import.meta.env.VITE_BACKEND_LINK + "/users/password/reset/", { newPassword: newPass }, { withCredentials: true });
             setIsEditingPass(false);
             setCurrPass("");
             setNewPass("");
@@ -133,7 +133,7 @@ export const MyProfileHandlers = ({ setChangeInProfile, setUserDetails, setIsEdi
         else {
 
             try {
-                await axios.patch(import.meta.env.VITE_BACKEND_LINK + "/api/v1/users/updateProfileInvestmentExperience",
+                await axios.patch(import.meta.env.VITE_BACKEND_LINK + "/users/profile/investment-experience/",
                     { investmentExperience: event.target.value },
                     { withCredentials: true });
                 setChangeInProfile(event.target.value);
@@ -154,7 +154,7 @@ export const MyProfileHandlers = ({ setChangeInProfile, setUserDetails, setIsEdi
         }
         else {
             try {
-                await axios.patch(import.meta.env.VITE_BACKEND_LINK + "/api/v1/users/updateProfileRiskProfile",
+                await axios.patch(import.meta.env.VITE_BACKEND_LINK + "/users/profile/risk-profile/",
                     { riskProfile: event.target.value },
                     { withCredentials: true })
                 setChangeInProfile(event.target.value);
@@ -175,7 +175,7 @@ export const MyProfileHandlers = ({ setChangeInProfile, setUserDetails, setIsEdi
         }
         else {
             try {
-                await axios.patch(import.meta.env.VITE_BACKEND_LINK + "/api/v1/users/updateProfileFinancialGoal",
+                await axios.patch(import.meta.env.VITE_BACKEND_LINK + "/users/profile/financial-goals/",
                     { financialGoals: event.target.value },
                     { withCredentials: true })
                 setChangeInProfile(event.target.value);
@@ -196,7 +196,7 @@ export const MyProfileHandlers = ({ setChangeInProfile, setUserDetails, setIsEdi
         }
         else {
             try {
-                await axios.patch(import.meta.env.VITE_BACKEND_LINK + "/api/v1/users/updateProfileInvestmentHorizon",
+                await axios.patch(import.meta.env.VITE_BACKEND_LINK + "/users/profile/investment-horizon/",
                     { investmentHorizon: event.target.value },
                     { withCredentials: true })
                 setChangeInProfile(event.target.value);

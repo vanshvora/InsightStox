@@ -88,7 +88,7 @@ export const Preference = () => {
         // Theme update
         if (theme !== initialTheme) {
           const themeResponce = await axios.patch(
-            import.meta.env.VITE_BACKEND_LINK + "/api/v1/users/updateTheme",
+            import.meta.env.VITE_BACKEND_LINK + "/users/preferences/theme/",
             { theme },
             { withCredentials: true }
           );
@@ -105,7 +105,7 @@ export const Preference = () => {
         // Layout update
         if (layout !== initialLayout) {
           const layoutResponce = await axios.patch(
-            import.meta.env.VITE_BACKEND_LINK + "/api/v1/users/updateDashboardLayout",
+            import.meta.env.VITE_BACKEND_LINK + "/users/preferences/dashboard-layout/",
             { dashboardlayout: layout },
             { withCredentials: true }
           );
