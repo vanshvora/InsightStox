@@ -1,4 +1,3 @@
-
 ![InsightStox Logo](https://drive.google.com/uc?export=view&id=1BVzEIrAtxF6D76pE-7wDIwmCHNfI7LPq)
 
 
@@ -17,21 +16,23 @@ In addition to portfolio features, InsightStox provides a highly visual dashboar
 | Layer | Technology |
 |-------|-----------|
 | Frontend | React 19, Vite, TailwindCSS, Chart.js |
-| Backend | Node.js, Express 5 |
-| Primary DB | Neon PostgreSQL (serverless) |
-| Secondary DB | MongoDB (session & job metadata) |
+| Backend | Python 3, Django 5, Django REST Framework |
+| Database | Neon PostgreSQL (serverless) |
+| Background Jobs| APScheduler |
 | AI / LLM | Groq (LangChain), LangGraph |
 | File Storage | Cloudinary |
 | Email | Brevo (Sendinblue) |
-| Auth | JWT, Google OAuth 2.0 |
+| Auth | Django Token Authentication, Google OAuth 2.0 |
 
 ---
 
 ## 🚀 Local Setup & Running
 
 ### Prerequisites
+- Python 3.11+
 - Node.js ≥ 18
 - npm ≥ 9
+- (Optional) Docker Desktop
 
 ### 1. Clone the repository
 ```bash
@@ -55,31 +56,35 @@ cp .env.example .env
 # Edit .env and fill in your values
 ```
 
-### 3. Install dependencies
+### 3. Option A: Run locally with Docker (Recommended)
 
+Make sure Docker Desktop is running, then from the root directory:
 ```bash
-# Backend
-cd backend
-npm install
-
-# Frontend
-cd ../frontend
-npm install
+docker-compose up --build
 ```
+Frontend will be available at: **http://localhost:5173**  
+Backend API runs at: **http://localhost:8000**
 
-### 4. Run locally
+### 3. Option B: Run locally without Docker
 
 Open **two terminals**:
 
 ```bash
 # Terminal 1 – Backend
 cd backend
-npm run server
+python -m venv .venv
+# Activate the virtual environment
+# Windows: .\.venv\Scripts\activate
+# Mac/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
 ```
 
 ```bash
 # Terminal 2 – Frontend
 cd frontend
+npm install
 npm run dev
 ```
 
@@ -94,28 +99,23 @@ Backend API runs at: **http://localhost:8000**
 
 | Variable | Description | Where to get it |
 |----------|-------------|-----------------|
-| `PORT` | Backend server port (default: 8000) | — |
-| `FRONTEND_LINK` | Your frontend URL | `http://localhost:5173` for local |
+| `DJANGO_SECRET_KEY` | Secret key for Django | Generate a random string |
+| `DEBUG` | Enable debug mode | `True` for local, `False` for prod |
 | `DATABASE_URL` | Neon PostgreSQL connection string | [console.neon.tech](https://console.neon.tech) |
-| `MONGODB_URL` | MongoDB connection string | [cloud.mongodb.com](https://cloud.mongodb.com) |
-| `JWT_SECRET` | Secret key for JWT signing | Generate a random string |
-| `JWT_EXPIRE` | JWT expiry duration (e.g. `7d`) | — |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name | [cloudinary.com/console](https://cloudinary.com/console) |
 | `CLOUDINARY_API_KEY` | Cloudinary API key | [cloudinary.com/console](https://cloudinary.com/console) |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret | [cloudinary.com/console](https://cloudinary.com/console) |
-| `brevo_API` | Brevo (Sendinblue) API key | [app.brevo.com/settings/keys/api](https://app.brevo.com/settings/keys/api) |
-| `GOOGLE_USER_EMAIL` | Sender email shown in transactional emails | Your verified Brevo sender email |
-| `JIGSAWSTACK_API_KEY` | JigsawStack API key (market news) | [jigsawstack.com/dashboard](https://jigsawstack.com/dashboard) |
-| `RATE_EXCHANGE` | Exchange rate API URL | `https://open.er-api.com/v6/latest/USD` (free) |
+| `BREVO_API_KEY` | Brevo (Sendinblue) API key | [app.brevo.com/settings/keys/api](https://app.brevo.com/settings/keys/api) |
+| `SENDER_EMAIL` | Sender email shown in transactional emails | Your verified Brevo sender email |
+| `RATE_EXCHANGE_URL` | Exchange rate API URL | `https://open.er-api.com/v6/latest/USD` (free) |
 | `GROQ_API_KEY` | Groq LLM API key | [console.groq.com/keys](https://console.groq.com/keys) |
-| `GOOGLE_CLIENT_ID` | Google OAuth 2.0 Client ID | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) |
 
 ### Frontend (`frontend/.env`)
 
 | Variable | Description | Value for local dev |
 |----------|-------------|---------------------|
 | `VITE_BACKEND_LINK` | Backend API base URL | `http://localhost:8000` |
-| `VITE_GOOGLE_CLIENT_ID` | Google OAuth 2.0 Client ID | Same as backend `GOOGLE_CLIENT_ID` |
+| `VITE_GOOGLE_CLIENT_ID` | Google OAuth 2.0 Client ID | Your Google Client ID |
 
 ---
 
@@ -123,26 +123,29 @@ Backend API runs at: **http://localhost:8000**
 
 ```
 InsightStox/
-├── backend/          # Express.js API server
-│   ├── src/
-│   │   ├── controllers/   # Route handlers
-│   │   ├── db/            # Neon PostgreSQL connection
-│   │   ├── middlewares/   # Auth & validation middleware
-│   │   ├── mongodb/       # MongoDB connection
-│   │   ├── mongoModels/   # Mongoose models
-│   │   ├── routes/        # Express routers
-│   │   └── utils/         # Utilities, AI agent, email, Cloudinary
-│   ├── .env.example       # Environment variable template
-│   └── index.js           # Server entry point
+├── backend/          # Django API server
+│   ├── ai_insight/    # LangChain/Groq agent apps
+│   ├── config/        # Core Django settings and WSGI/ASGI
+│   ├── dashboard/     # Market data & summary views
+│   ├── feedback/      # User queries and suggestions
+│   ├── jobs/          # APScheduler tasks
+│   ├── portfolio/     # User transaction & holding views
+│   ├── users/         # Authentication and Profile views
+│   ├── utils/         # Helper functions (Yahoo Finance, Cloudinary)
+│   ├── .env           # Environment variables
+│   ├── build.sh       # Deployment script
+│   └── manage.py      # Django management script
 │
-└── frontend/         # React + Vite SPA
-    ├── src/
-    │   ├── components/    # Reusable UI components
-    │   ├── context/       # React context (AppContext)
-    │   ├── pages/         # Page-level components
-    │   └── utils/         # Helper functions
-    ├── .env.example       # Environment variable template
-    └── index.html
+├── frontend/         # React + Vite SPA
+│   ├── src/
+│   │   ├── components/    # Reusable UI components
+│   │   ├── context/       # React context (AppContext)
+│   │   ├── pages/         # Page-level components
+│   │   └── utils/         # Helper functions
+│   ├── .env.example       # Environment variable template
+│   └── index.html
+│
+└── docker-compose.yml # Docker configuration for local dev
 ```
 
 ---
@@ -153,4 +156,4 @@ InsightStox/
 
 ---
 
-> ⚠️ **Note:** This project was originally developed as a team project (11 members). This is a personal fork for local development and experimentation.
+> ⚠️ **Note:** This project was originally developed as a team project (11 members) on Node.js/Express. This is a personal fork where the backend was completely migrated to Python/Django for enhanced data analysis and local development capabilities.
