@@ -31,7 +31,7 @@ const Navbar = ({ darkMode, setDarkMode, pageType, profileData = {} }) => {
   };
   const handleLogout = async () => {
         try{
-            await axios.post(import.meta.env.VITE_BACKEND_LINK + "/users/logout/", {withCredentials: true});
+            await axios.post(import.meta.env.VITE_BACKEND_LINK + "/users/logout/", {}, {withCredentials: true});
             navigate("/");
         }
         catch(err){

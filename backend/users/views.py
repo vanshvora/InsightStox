@@ -1,5 +1,7 @@
 import random
 import string
+import uuid
+import datetime
 
 from django.conf import settings
 from django.contrib.auth import authenticate
@@ -302,11 +304,11 @@ class LoginView(APIView):
         # Add security alert
         _add_security_alert(user, 'Login', 'New device logged in', token.key, browser, os_type)
 
-        return Response({
+        return set_auth_cookie(Response({
             'success': True,
             'message': 'User logged in successfully',
             'token': token.key,
-        })
+        }), token.key)
 
 
 class GoogleLoginView(APIView):
@@ -379,11 +381,11 @@ class GoogleLoginView(APIView):
 
         _add_security_alert(user, 'Login', 'Google login', token.key, browser, os_type)
 
-        return Response({
+        return set_auth_cookie(Response({
             'success': True,
             'message': 'User logged in successfully',
             'token': token.key,
-        })
+        }), token.key)
 
 
 class GoogleRegisterView(APIView):
@@ -446,11 +448,11 @@ class GoogleRegisterView(APIView):
 
         _add_security_alert(user, 'Registration', 'Google registration', token.key, browser, os_type)
 
-        return Response({
+        return set_auth_cookie(Response({
             'success': True,
             'message': 'User registered successfully',
             'token': token.key,
-        })
+        }), token.key)
 
 
 class LogoutView(APIView):
@@ -464,7 +466,7 @@ class LogoutView(APIView):
             _add_security_alert(request.user, 'Logout', 'Session logged out', token_key, browser, os_type)
             Token.objects.filter(key=token_key).delete()
 
-        return Response({'success': True, 'message': 'Logged out successfully'})
+        return delete_auth_cookie(Response({'success': True, 'message': 'Logged out successfully'}))
 
 
 class LogoutSessionView(APIView):
@@ -491,7 +493,7 @@ class LogoutSessionView(APIView):
         browser, os_type = _get_user_agent_info(request)
         _add_security_alert(request.user, 'Logout', 'Specific session logged out', session_token, browser, os_type)
 
-        return Response({'success': True, 'message': 'Session logged out successfully'})
+        return delete_auth_cookie(Response({'success': True, 'message': 'Session logged out successfully'}))
 
 
 class LogoutAllSessionsView(APIView):
@@ -508,7 +510,7 @@ class LogoutAllSessionsView(APIView):
         browser, os_type = _get_user_agent_info(request)
         _add_security_alert(request.user, 'Logout', 'All other sessions logged out', current_token or '', browser, os_type)
 
-        return Response({'success': True, 'message': 'All other sessions logged out'})
+        return delete_auth_cookie(Response({'success': True, 'message': 'All other sessions logged out'}))
 
 
 # ==================== PROFILE VIEWS ====================
