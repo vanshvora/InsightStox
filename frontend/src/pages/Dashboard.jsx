@@ -9,6 +9,7 @@ import WelcomeInvestor from '../components/WelcomeInvestor/WelcomeInvestor'
 import PortfolioChart from '../components/PortfolioChart/PortfolioChart'
 import MyHoldings from '../components/MyHoldings/MyHoldings'
 import Navbar from '../components/Navbar.jsx';
+import DataPrefetcher from '../components/DataPrefetcher.jsx';
 import { useAppContext } from "../context/AppContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from 'react';
@@ -38,7 +39,7 @@ export const Dashboard = () => {
   return (
     <>
     <div className="dashboard-container">
-       
+       <DataPrefetcher />
       <Navbar darkMode={darkMode} setDarkMode={setDarkMode} pageType="dashboard" 
       profileData={{name: userDetails?.name?.split(" ")[0] || "Guest",email: userDetails?.email || "N/A"}}/>
 

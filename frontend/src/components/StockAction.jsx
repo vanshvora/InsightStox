@@ -91,10 +91,8 @@ const StockAction = ({ action, handler, symbol, currPrice, priceChange, pricePer
                 { withCredentials: true }
             );
 
-            await Promise.all(
-                PORTFOLIO_QUERY_KEYS.map((queryKey) =>
-                    queryClient.invalidateQueries({ queryKey })
-                )
+            PORTFOLIO_QUERY_KEYS.forEach((queryKey) =>
+                queryClient.invalidateQueries({ queryKey })
             );
 
             Swal.fire({

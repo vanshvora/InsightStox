@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useQuery } from '@tanstack/react-query';
 import './Dashboard-Header.css';
 import growthicon from '../assets/growthicon.svg';
 import { useAppContext } from "../context/AppContext.jsx";
@@ -13,48 +14,30 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_LINK;
 const STOCK_API = `${BACKEND_URL}/dashboard/starter/`;
 
 const DashboardHeader = ({ isWatchlistPage = false, onAddToWatchlist = null }) => {
-  const [stocks, setStocks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [query, setQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [typingTimeout, setTypingTimeout] = useState(null);
   const navigate = useNavigate();
-  const { isSearchActive, setIsSearchActive, headerStocks, setHeaderStocks, headerStocksTimestamp, setHeaderStocksTimestamp } = useAppContext();
+  const { isSearchActive, setIsSearchActive } = useAppContext();
 
   const handleFocus = () => setIsSearchActive(true);
   const handleClose = () => {setIsSearchActive(false); setQuery(''); setSearchResults([]);}
 
-  // Fetch stock data from backend (session cookie included)
-  const fetchStockData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
+  // Fetch stock data from backend using React Query for automatic caching
+  const { data: stocks = [], isLoading: loading, error: queryError } = useQuery({
+    queryKey: ['dashboardHeaderStocks'],
+    queryFn: async () => {
       const res = await axios.get(STOCK_API);
-
       if (res.data?.data && Array.isArray(res.data.data)) {
-        const stockData = res.data.data.slice(0, 3); //show top 3 stocks
-        setStocks(stockData);
-        // Cache in context
-        setHeaderStocks(stockData);
-        setHeaderStocksTimestamp(Date.now());
-        console.log(stockData);
-      } else {
-        setError('Invalid data format from server.');
+        return res.data.data.slice(0, 3); // show top 3 stocks
       }
-    } catch (err) {
-      console.error('Error fetching stock data:', err);
-      if (err.response?.status === 401) {
-        setError('Session expired. Please log in again.');
-      } else {
-        setError('Failed to load market data.');
-      }
-    } finally {
-      setLoading(false);
+      throw new Error('Invalid data format from server.');
     }
-  };
+  });
+
+  const error = queryError ? (queryError.response?.status === 401 ? 'Session expired. Please log in again.' : 'Failed to load market data.') : null;
+
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setQuery(value);
@@ -114,24 +97,9 @@ const DashboardHeader = ({ isWatchlistPage = false, onAddToWatchlist = null }) =
       setSearchResults([]);
       setQuery('');
     };
-
-  useEffect(() => {
-    // Check if we have cached data that's less than 5 minutes old
-    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
-    const now = Date.now();
     
-    if (headerStocks && headerStocksTimestamp && (now - headerStocksTimestamp) < CACHE_DURATION) {
-      // Use cached data
-      setStocks(headerStocks);
-      setLoading(false);
-    } else {
-      // Fetch fresh data
-      fetchStockData();
-    }
-    // Optionally auto-refresh every minute:
-    // const interval = setInterval(fetchStockData, 60000);
-    // return () => clearInterval(interval);
-  }, []);
+
+
     useEffect(() => {
     const onEsc = (e) => {
       if (e.key === 'Escape') {

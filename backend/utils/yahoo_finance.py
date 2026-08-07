@@ -86,32 +86,87 @@ def map_stock_data(info):
 
 
 def get_quotes(symbols):
-    """Fetch basic quote info for a list of symbols."""
+    """Fetch basic quote info for a list of symbols efficiently."""
     if not symbols:
         return []
         
-    try:
-        # yfinance download handles multiple symbols efficiently
-        data = yf.download(symbols, period="1d", group_by="ticker", threads=True, progress=False)
-        results = []
+    if isinstance(symbols, str):
+        symbols = [symbols]
         
-        # Check if multiple symbols or just one
-        if isinstance(symbols, str):
-            symbols = [symbols]
-            
-        for sym in symbols:
-            try:
-                ticker = yf.Ticker(sym)
-                info = ticker.info
-                mapped = map_stock_data(info)
-                results.append(mapped)
-            except Exception as e:
-                print(f"Error fetching quote for {sym}: {e}")
-                
-        return results
+    results = []
+    
+    # 1. Download recent history for all symbols in one fast request!
+    # period="5d" ensures we have previous close even on Mondays or after holidays
+    try:
+        data = yf.download(symbols, period="5d", group_by="ticker", threads=True, progress=False)
     except Exception as e:
-        print(f"Error in get_quotes: {e}")
-        return []
+        print(f"yfinance download failed: {e}")
+        data = None
+
+    for sym in symbols:
+        mapped = map_stock_data({})
+        mapped['symbol'] = sym
+        mapped['name'] = sym
+        
+        try:
+            # Attempt to safely get fast_info if available (1 fast request)
+            ticker = yf.Ticker(sym)
+            
+            # fast_info is a lazy dictionary, accessing keys might trigger a fast request
+            if hasattr(ticker, 'fast_info'):
+                fi = ticker.fast_info
+                
+                # We wrap in try-except because fi keys can throw if data is missing
+                try: mapped['price'] = f"{float(fi['lastPrice']):.2f}" 
+                except: pass
+                
+                try: mapped['previousClose'] = f"{float(fi['previousClose']):.2f}" 
+                except: pass
+                
+                try: mapped['volume'] = str(int(fi['lastVolume'])) 
+                except: pass
+                
+                try: mapped['exchange'] = str(fi.get('exchange', 'N/A')) 
+                except: pass
+                
+                try: mapped['currency'] = str(fi.get('currency', 'N/A'))
+                except: pass
+
+            # Fallback to yf.download data if fast_info failed or was incomplete!
+            if data is not None and not data.empty:
+                if len(symbols) == 1:
+                    df = data
+                else:
+                    df = data[sym] if sym in data.columns.levels[0] else None
+                    
+                if df is not None and not df.empty:
+                    closes = df['Close'].dropna()
+                    vols = df['Volume'].dropna()
+                    
+                    if mapped['price'] == 'N/A' and len(closes) >= 1:
+                        mapped['price'] = f"{float(closes.iloc[-1]):.2f}"
+                        
+                    if mapped['previousClose'] == 'N/A' and len(closes) >= 2:
+                        mapped['previousClose'] = f"{float(closes.iloc[-2]):.2f}"
+                        
+                    if mapped['volume'] == 'N/A' and len(vols) >= 1:
+                        mapped['volume'] = str(int(vols.iloc[-1]))
+            
+            # Calculate Change and Change Percent based on price and previousClose!
+            if mapped['price'] != 'N/A' and mapped['previousClose'] != 'N/A':
+                price = float(mapped['price'])
+                prev = float(mapped['previousClose'])
+                change = price - prev
+                pct = (change / prev) * 100 if prev != 0 else 0
+                mapped['change'] = f"{change:.2f}"
+                mapped['changePercent'] = f"{pct:.2f}"
+
+            results.append(mapped)
+        except Exception as e:
+            print(f"Error processing {sym}: {e}")
+            results.append(mapped)
+
+    return results
 
 
 import requests
