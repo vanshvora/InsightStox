@@ -8,6 +8,7 @@ from .models import StockSummary
 from .services import add_buy_transaction, add_sell_transaction
 from utils.yahoo_finance import get_quotes
 from utils.price_store import price_store, currency_store
+from users.views import _add_activity_history, _get_user_agent_info
 
 # Note: The actual AddTransaction endpoint was placed in dashboard in JS,
 # but we'll put it here logically, and link it in dashboard urls too for compatibility.
@@ -39,6 +40,16 @@ class AddTransactionView(APIView):
             
         if not success:
             return Response({'success': False, 'message': msg}, status=status.HTTP_400_BAD_REQUEST)
+            
+        from django.core.cache import cache
+        cache.delete(f"user_valuation_{request.user.id}")
+            
+        browser, os_type = _get_user_agent_info(request)
+        token = request.auth.token if request.auth and hasattr(request.auth, 'token') else request.META.get('HTTP_AUTHORIZATION', '').replace('Token ', '')
+        if not token:
+            token = request.COOKIES.get('auth_token', '')
+        action = f"Bought {quantity} shares of {symbol}" if t_type == 'BUY' else f"Sold {quantity} shares of {symbol}"
+        _add_activity_history(request.user, 'Transaction', action, token, browser, os_type)
             
         return Response({'success': True, 'message': msg})
 

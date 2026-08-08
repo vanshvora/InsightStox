@@ -283,64 +283,7 @@ export const MyProfile = () => {
                             </>
                         )}
 
-                        <h2 className="myPage_InvProfile"> Your investment profile </h2>
-                        <span className="myPage_AIspan"> This field helps us to provide you better suggestions.</span>
-                        <div className="myPage_InfRow3">
-                            <div className="myPage_InvExp">
-                                <label>Investment Experience</label>
-                                <div className="myPage_InfValueDropDown1">
-                                    <select className="myPage_InvExpList" value={userDetails?.investmentExp || ""} onChange={handleInvExp}>
-                                        <option value="" disabled>Select an option</option>
-                                        <option value="Beginner">Beginner</option>
-                                        <option value="Intermediate">Intermediate</option>
-                                        <option value="Expert">Expert</option>
-                                    </select>
-                                    <img className="myPage_g1" src={GoToArrow} alt="go-to" />
-                                </div>
-                                <hr />
-                            </div>
-                            <div className="myPage_RiskProfile">
-                                <label>Risk Profile</label>
-                                <div className="myPage_InfValueDropDown2">
-                                    <select className="myPage_RiskProfList" value={userDetails?.riskProfile || ""} onChange={handleRiskProf}>
-                                        <option value="" disabled>Select an option</option>
-                                        <option value="Low - Conservative">Low - Conservative</option>
-                                        <option value="Medium - Moderate">Medium - Moderate</option>
-                                        <option value="High - Aggressive">High - Aggressive</option>
-                                    </select>
-                                    <img className="myPage_g2" src={GoToArrow} alt="go-to" />
-                                </div>
-                                <hr />
-                            </div>
-                        </div>
-                        <div className="myPage_InfRow6">
-                            <div className="myPage_FinGoals">
-                                <label>Financial Goals</label>
-                                <div className="myPage_InfValueDropDown3">
-                                    <select className="myPage_FinGoalList" data-testid="myPage_FinGoalList" value={userDetails?.FinGoal || ""} onChange={handleFinGoals}>
-                                        <option value="" disabled>Select an option</option>
-                                        <option value="Primary Growth">Primary growth</option>
-                                        <option value="Income Generation">Income generation</option>
-                                        <option value="Balanced Growth & Income">Balanced growth & income</option>
-                                    </select>
-                                    <img className="myPage_g1" src={GoToArrow} alt="go-to" />
-                                </div>
-                                <hr />
-                            </div>
-                            <div className="myPage_InvHorizon">
-                                <label>Investment Horizon</label>
-                                <div className="myPage_InfValueDropDown4">
-                                    <select className="myPage_InvHorizonList" value={userDetails?.InvHorizon || ""} onChange={handleInvHorizon}>
-                                        <option value="" disabled>Select an option</option>
-                                        <option value="Short-term (1-3 years)">Short-term (1-3 years)</option>
-                                        <option value="Medium-term (3-10 years)">Medium-term (3-10 years)</option>
-                                        <option value="Long-term (10+ years)">Long-term (10+ years)</option>
-                                    </select>
-                                    <img className="myPage_g2" src={GoToArrow} alt="go-to" />
-                                </div>
-                                <hr />
-                            </div>
-                        </div>
+
                     </div>
                 </div>
             </div >

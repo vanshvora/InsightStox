@@ -1,9 +1,9 @@
 .card {
   background-color: #000000;
-  border: 1px solid #00c853;
+  border: none;
   border-radius: 12px;
   padding: 1.5rem;
-  box-shadow: 0 0 15px rgba(0, 255, 128, 0.05);
+  box-shadow: none;
 }
 
 .myholdings-wrapper .holdings-card {

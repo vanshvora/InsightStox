@@ -92,7 +92,7 @@ function timeAgo(timestamp) {
 
 function mapMover(stock) {
   return {
-    name: stock.shortName || stock.name || stock.symbol || 'N/A',
+    name: (stock.shortName || stock.name || stock.symbol || 'N/A').replace(/\.NS$/, ''),
     symbol: stock.symbol,
     exchange: stock.exchange || 'NSE',
     price: formatPrice(stock.price),
@@ -148,6 +148,7 @@ const MarketMovers = () => {
         losers: formattedLosers.slice(0, 3),
       };
     },
+    refetchInterval: 120000,
     retry: 1,
     staleTime: 60 * 1000,
   });

@@ -30,7 +30,13 @@ const Navbar = ({ darkMode, setDarkMode, pageType, profileData = {} }) => {
     navigate(path);
   };
   const handleLogout = () => {
-      axios.post(import.meta.env.VITE_BACKEND_LINK + "/users/logout/", {}, {withCredentials: true}).catch(e => console.error("Error during logout:", e));
+      sessionStorage.setItem("isLoggingOut", "true");
+      axios.post(import.meta.env.VITE_BACKEND_LINK + "/users/logout/", {}, {withCredentials: true})
+        .catch(e => console.error("Error during logout:", e))
+        .finally(() => {
+          sessionStorage.removeItem("isLoggingOut");
+        });
+      
       if (typeof setUserDetails === 'function') setUserDetails(null);
       window.location.href = "/";
   }

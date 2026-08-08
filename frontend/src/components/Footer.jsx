@@ -2,7 +2,7 @@ import React, { useState,useEffect } from "react";
 import { Link } from "react-router-dom";
 import github_logo from "../assets/github_logo.png";
 import { PolicyModal } from "./PolicyModal";
-import { PrivacyPolicy } from './PrivacyPolicy';
+import { SiteLegal } from './SiteLegal';
 import { TermsCondition } from './TermsCondition';
 import "./Footer.css";
 import logofooter from "../assets/logofooter-navbar.svg";
@@ -96,7 +96,7 @@ const Footer = ({ darkMode ,navigationLinks=[],legalLinks=[] }) => {
   
 <PolicyModal
   title="Privacy Policy"
-  content={<PrivacyPolicy />}
+  content={<SiteLegal />}
   isOpen={activeModal === "privacy"}
   onClose={closeModal}
 />

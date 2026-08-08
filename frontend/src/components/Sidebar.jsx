@@ -25,14 +25,19 @@ export const Sidebar = ({ primaryData = {} }) => {
 
         if (path.includes("/data-privacy")) setActiveField("Data & Privacy");
         else if (path.includes("/activity")) setActiveField("Activity");
-        else if (path.includes("/preferences")) setActiveField("Preferences");
         else if (path.includes("/help-support")) setActiveField("Help & Support");
         else setActiveField("My Profile");
 
     }, [location.pathname]);
 
     const handleLogout = () => {
-        axios.post(import.meta.env.VITE_BACKEND_LINK + "/users/logout/", {}, { withCredentials: true }).catch(e => console.error("Error during logout:", e));
+        sessionStorage.setItem("isLoggingOut", "true");
+        axios.post(import.meta.env.VITE_BACKEND_LINK + "/users/logout/", {}, { withCredentials: true })
+          .catch(e => console.error("Error during logout:", e))
+          .finally(() => {
+            sessionStorage.removeItem("isLoggingOut");
+          });
+          
         localStorage.removeItem("activeMenu");
         window.location.href = "/";
     }
@@ -67,7 +72,6 @@ export const Sidebar = ({ primaryData = {} }) => {
                     "My Profile",
                     "Data & Privacy",
                     "Activity",
-                    "Preferences",
                     "Help & Support",
                     "Logout",
                 ].map((item, index) => (

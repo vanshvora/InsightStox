@@ -19,10 +19,10 @@ const USER_API = `${BASE_URL}/users/profile/`;
 const PORTFOLIO_SUMMARY_API = `${BASE_URL}/portfolio/summary/`;
 
 const stockmapping = (stockData) => ({
-  name: (stockData.name && stockData.name !== 'N/A' ? stockData.name : null) || 
+  name: ((stockData.name && stockData.name !== 'N/A' ? stockData.name : null) || 
         (stockData.shortName && stockData.shortName !== 'N/A' ? stockData.shortName : null) || 
         (stockData.longName && stockData.longName !== 'N/A' ? stockData.longName : null) || 
-        stockData.symbol,
+        stockData.symbol).replace(/\.NS$/, ''),
   symbol: stockData.symbol,
   nse: stockData.exchange,
   price: stockData.price || stockData.currentPrice,
@@ -46,7 +46,8 @@ const TrendingStocks = () => {
     queryFn: async () => {
       const res = await axios.get(STOCKS_API);
       return res.data.data?.map(stockmapping) || [];
-    }
+    },
+    refetchInterval: 120000
   });
 
   const error = queryError ? 'Failed to load trending stocks from backend.' : null;
@@ -60,8 +61,24 @@ const TrendingStocks = () => {
     <div className="trending-stocks-container">
       <h3 className="trending-title">Trending Stocks</h3>
 
-      {loading && <p>Loading trending stocks…</p>}
       {error && <p className="error">{error}</p>}
+
+      {loading && (
+        <div className="stocks-list">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="trending-stock-item">
+              <div className="stock-info flex flex-col">
+                <div className="skeleton" style={{ width: '80px', height: '20px', marginBottom: '8px' }}></div>
+                <div className="skeleton" style={{ width: '40px', height: '14px' }}></div>
+              </div>
+              <div className="stock-details" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                <div className="skeleton" style={{ width: '60px', height: '20px', marginBottom: '8px' }}></div>
+                <div className="skeleton" style={{ width: '70px', height: '14px' }}></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {!loading && !error && (
         <div className="stocks-list">
@@ -182,14 +199,28 @@ const WelcomeInvestor = () => {
             <p>Here's your portfolio overview for today.</p>
           </div>
 
-          {loading && <p>Loading portfolio valuation…</p>}
           {error && <p className="error">Error loading valuation: {error}</p>}
 
-          <div className="portfolio-grid">
-            {cardData.map((card, index) => (
-              <PortfolioCard key={index} {...card} />
-            ))}
-          </div>
+          {loading && (
+            <div className="portfolio-grid">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="portfolio-card">
+                  <div className="skeleton" style={{ width: '40px', height: '40px', borderRadius: '8px', marginBottom: '16px' }}></div>
+                  <div className="skeleton" style={{ width: '120px', height: '16px', marginBottom: '12px' }}></div>
+                  <div className="skeleton" style={{ width: '100px', height: '28px', marginBottom: '8px' }}></div>
+                  <div className="skeleton" style={{ width: '60px', height: '14px' }}></div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!loading && !error && (
+            <div className="portfolio-grid">
+              {cardData.map((card, index) => (
+                <PortfolioCard key={index} {...card} />
+              ))}
+            </div>
+          )}
         </div>
         <aside className="sidebar">
           <TrendingStocks />

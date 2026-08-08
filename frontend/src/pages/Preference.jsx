@@ -146,24 +146,6 @@ export const Preference = () => {
           <h2>Preferences & Personalisation</h2>
 
           <form className="preferences-form" >
-            {/* Theme Section */}
-            <div className="form-group">
-              <label htmlFor="theme-select">Theme</label>
-              <div className="select-wrapper">
-              <select
-                id="theme-select"
-                name="theme"
-                value={theme}
-                onChange={(e) => setTheme(e.target.value)}
-              >
-                <option value="Dark">Dark</option>
-                <option value="Light">Light</option>
-              </select>
-              <MdOutlineKeyboardArrowDown className="select-icon" />
-              </div>    
-              <p className="description">Choose the app appearance.</p>
-            </div>
-
             {/* Dashboard Layout Section */}
             <div className="form-group">
               <label htmlFor="layout-select">Dashboard Layout</label>

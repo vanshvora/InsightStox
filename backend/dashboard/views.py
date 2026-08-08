@@ -10,6 +10,7 @@ from .services import get_current_portfolio_valuation, calculate_stock_allocatio
 from portfolio.models import Stock, StockSummary, UserWatchlist, PortfolioValuationDaily, PortfolioValuationHourly
 from utils.yahoo_finance import search_stock, get_quotes
 import yfinance as yf
+from users.views import _add_activity_history, _get_user_agent_info
 
 
 def _safe_float(value, default=None):
@@ -91,6 +92,17 @@ class StarterView(APIView):
         # Default market indices
         symbols = ["^NSEBANK", "^NSEI", "^BSESN"]
         quotes = get_quotes(symbols)
+        
+        name_map = {
+            "^NSEBANK": "NIFTY BANK",
+            "^NSEI": "NIFTY 50",
+            "^BSESN": "SENSEX"
+        }
+        
+        for q in quotes:
+            if q.get('symbol') in name_map:
+                q['name'] = name_map[q['symbol']]
+                
         return Response({'success': True, 'data': quotes})
 
 
@@ -100,18 +112,26 @@ class ValuationView(APIView):
         from decimal import Decimal
         from utils.yahoo_finance import get_quotes
         from utils.price_store import price_store, currency_store
+        from django.core.cache import cache
         
+        cache_key = f"user_valuation_{request.user.id}"
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response({'success': True, 'data': cached_data})
+            
         holdings = StockSummary.objects.filter(user=request.user, current_holding__gt=0).select_related('stock')
         
         if not holdings.exists():
-            return Response({'success': True, 'data': {
+            data = {
                 'totalValuation': 0,
                 'totalInvestment': 0,
                 'todayProfitLoss': 0,
                 'todayProfitLosspercentage': 0,
                 'overallProfitLoss': 0,
                 'overallProfitLosspercentage': 0
-            }})
+            }
+            cache.set(cache_key, data, timeout=60*60) # cache for 1 hour
+            return Response({'success': True, 'data': data})
             
         symbols = [h.stock.symbol for h in holdings]
         quotes = get_quotes(symbols)
@@ -179,18 +199,24 @@ class ValuationView(APIView):
             'overallProfitLosspercentage': float(Decimal(str(total_return_pct)).quantize(Decimal('0.01')))
         }
         
+        cache.set(cache_key, data, timeout=60*60) # cache for 1 hour
         return Response({'success': True, 'data': data})
 
 
 class WatchlistView(APIView):
     def get(self, request):
         watchlist = UserWatchlist.objects.filter(user=request.user).select_related('stock')
-        symbols = [item.stock.symbol for item in watchlist]
-        
-        if not symbols:
+        if not watchlist.exists():
             return Response({'success': True, 'data': []})
             
+        symbols = [item.stock.symbol for item in watchlist]
         quotes = get_quotes(symbols)
+        
+        stock_map = {item.stock.symbol: item.stock.short_name or item.stock.symbol for item in watchlist}
+        for q in quotes:
+            if q.get('symbol') in stock_map:
+                q['name'] = stock_map[q['symbol']]
+                
         return Response({'success': True, 'data': quotes})
 
 
@@ -220,6 +246,13 @@ class AddToWatchlistView(APIView):
                 stock.save()
                 
         UserWatchlist.objects.create(user=request.user, stock=stock)
+        
+        browser, os_type = _get_user_agent_info(request)
+        token = request.auth.token if request.auth and hasattr(request.auth, 'token') else request.META.get('HTTP_AUTHORIZATION', '').replace('Token ', '')
+        if not token:
+            token = request.COOKIES.get('auth_token', '')
+        _add_activity_history(request.user, 'Watchlist', f"Added {symbol} to watchlist", token, browser, os_type)
+        
         return Response({'success': True, 'message': 'Stock added to watchlist'})
 
 
@@ -233,6 +266,13 @@ class RemoveFromWatchlistView(APIView):
         try:
             stock = Stock.objects.get(symbol=symbol)
             UserWatchlist.objects.filter(user=request.user, stock=stock).delete()
+            
+            browser, os_type = _get_user_agent_info(request)
+            token = request.auth.token if request.auth and hasattr(request.auth, 'token') else request.META.get('HTTP_AUTHORIZATION', '').replace('Token ', '')
+            if not token:
+                token = request.COOKIES.get('auth_token', '')
+            _add_activity_history(request.user, 'Watchlist', f"Removed {symbol} from watchlist", token, browser, os_type)
+            
             return Response({'success': True, 'message': 'Stock removed from watchlist'})
         except Stock.DoesNotExist:
             return Response({'success': False, 'message': 'Stock not found in watchlist'}, status=status.HTTP_404_NOT_FOUND)
@@ -250,41 +290,31 @@ class StockAllocationView(APIView):
         })
 
 
+from .models import GlobalMarketData
+
 class MarketGainersView(APIView):
     def get(self, request):
-        # yfinance doesn't easily expose day gainers natively without scraping
-        # We'll use a predefined list of popular Indian stocks for demonstration
-        symbols = ['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS', 'SBIN.NS']
-        quotes = get_quotes(symbols)
-        # Sort by change percent descending
-        gainers = sorted([q for q in quotes if q['changePercent'] != 'N/A'], key=lambda x: float(x['changePercent']), reverse=True)
-        return Response({'success': True, 'data': gainers[:10]})
+        obj = GlobalMarketData.objects.filter(data_type='GAINERS').first()
+        data = obj.payload if obj else []
+        return Response({'success': True, 'data': data})
 
 
 class MarketLosersView(APIView):
     def get(self, request):
-        symbols = ['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS', 'SBIN.NS']
-        quotes = get_quotes(symbols)
-        # Sort by change percent ascending
-        losers = sorted([q for q in quotes if q['changePercent'] != 'N/A'], key=lambda x: float(x['changePercent']))
-        return Response({'success': True, 'data': losers[:10]})
+        obj = GlobalMarketData.objects.filter(data_type='LOSERS').first()
+        data = obj.payload if obj else []
+        return Response({'success': True, 'data': data})
 
 
 class MarketActiveView(APIView):
     def get(self, request):
-        symbols = ['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS', 'SBIN.NS']
-        quotes = get_quotes(symbols)
-        active = sorted([q for q in quotes if q['volume'] != 'N/A'], key=lambda x: int(str(x['volume']).replace(',', '')), reverse=True)
+        active_obj = GlobalMarketData.objects.filter(data_type='ACTIVE').first()
+        news_obj = GlobalMarketData.objects.filter(data_type='NEWS').first()
         
-        news = []
-        try:
-            import yfinance as yf
-            ticker = yf.Ticker('^NSEI')
-            news = ticker.news[:5] if hasattr(ticker, 'news') else []
-        except:
-            pass
+        active_data = active_obj.payload if active_obj else []
+        news_data = news_obj.payload if news_obj else []
             
-        return Response({'success': True, 'data': active[:10], 'news': news})
+        return Response({'success': True, 'data': active_data, 'news': news_data})
 
 
 class StockSummaryView(APIView):

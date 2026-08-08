@@ -10,7 +10,6 @@ import { Portfolio } from './pages/Portfolio';
 import { MyProfile} from './pages/MyProfile';
 import { StockDetails } from './pages/StockDetails';
 import {HelpSupport} from './pages/HelpSupport';
-import {Preference} from './pages/Preference'
 import AiInsight from './pages/AiInsight';
 import Watchlist from './pages/WatchList';
 import {createBrowserRouter,RouterProvider} from "react-router-dom";
@@ -56,10 +55,6 @@ const router = createBrowserRouter(
     {
       path: "/stockdetails/:symbol",
       element: <StockDetails />
-    },
-    {
-      path:"/preferences",
-      element:<Preference/>
     },
     {
       path:"/help-support",

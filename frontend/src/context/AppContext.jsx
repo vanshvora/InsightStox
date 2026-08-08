@@ -44,6 +44,10 @@ export const AppProvider = ({ children }) => {
     // - If isAuthOrHome === true: if token exists => navigate to /dashboard
     // - If isAuthOrHome === false: if token missing => alert and navigate to /
     const ensureAuth = async (navigate, isAuthOrHome = false) => {
+        if (sessionStorage.getItem("isLoggingOut") === "true") {
+            return false;
+        }
+
         const hasToken = await checkToken();
         if (isAuthOrHome) {
             if (hasToken) navigate("/dashboard");

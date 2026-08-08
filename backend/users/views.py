@@ -509,44 +509,55 @@ class LogoutView(APIView):
 
 
 class LogoutSessionView(APIView):
-    """Logout a specific session by token."""
+    """Logout a specific session by ID."""
 
     def post(self, request):
-        session_token = request.data.get('token', '')
-        if not session_token:
+        session_id = request.data.get('id', '')
+        if not session_id:
             return Response(
-                {'success': False, 'message': 'Session token is required'},
+                {'success': False, 'message': 'Session ID is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        session = ActiveSession.objects.filter(user=request.user, token=session_token).first()
+        session = ActiveSession.objects.filter(user=request.user, id=session_id).first()
         if not session:
             return Response(
                 {'success': False, 'message': 'Session not found'},
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        session_token = session.token
         session.delete()
 
         browser, os_type = _get_user_agent_info(request)
         _add_security_alert(request.user, 'Logout', 'Specific session logged out', session_token, browser, os_type)
 
-        return delete_auth_cookie(Response({'success': True, 'message': 'Session logged out successfully'}))
+        current_token = request.auth.token if request.auth and hasattr(request.auth, 'token') else request.META.get('HTTP_AUTHORIZATION', '').replace('Token ', '')
+        if not current_token:
+            current_token = request.COOKIES.get('auth_token')
+
+        resp_data = {'success': True, 'message': 'Session logged out successfully', 'is_current': False}
+        
+        if current_token == session_token:
+            resp_data['is_current'] = True
+            resp = Response(resp_data)
+            return delete_auth_cookie(resp)
+            
+        return Response(resp_data)
 
 
 class LogoutAllSessionsView(APIView):
-    """Logout all sessions except current."""
+    """Logout all sessions including current."""
 
     def post(self, request):
-        current_token = request.auth.token if request.auth and hasattr(request.auth, 'token') else request.META.get('HTTP_AUTHORIZATION', '').replace('Token ', '')
-        sessions = ActiveSession.objects.filter(user=request.user).exclude(token=current_token)
-
+        sessions = ActiveSession.objects.filter(user=request.user)
         sessions.delete()
 
         browser, os_type = _get_user_agent_info(request)
-        _add_security_alert(request.user, 'Logout', 'All other sessions logged out', current_token or '', browser, os_type)
+        current_token = request.auth.token if request.auth and hasattr(request.auth, 'token') else request.META.get('HTTP_AUTHORIZATION', '').replace('Token ', '')
+        _add_security_alert(request.user, 'Logout', 'All sessions logged out', current_token or '', browser, os_type)
 
-        return delete_auth_cookie(Response({'success': True, 'message': 'All other sessions logged out'}))
+        return delete_auth_cookie(Response({'success': True, 'message': 'All sessions logged out'}))
 
 
 # ==================== PROFILE VIEWS ====================

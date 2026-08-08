@@ -86,12 +86,26 @@ def map_stock_data(info):
 
 
 def get_quotes(symbols):
-    """Fetch basic quote info for a list of symbols efficiently."""
+    """Fetch basic quote info for a list of symbols efficiently with caching."""
     if not symbols:
         return []
         
     if isinstance(symbols, str):
         symbols = [symbols]
+        
+    from django.core.cache import cache
+    
+    # Sort symbols so the cache key is consistent regardless of order
+    sorted_symbols = sorted(symbols)
+    cache_key = f"quotes_{'_'.join(sorted_symbols)}"
+    # Limit key length in case of many symbols
+    if len(cache_key) > 200:
+        import hashlib
+        cache_key = f"quotes_{hashlib.md5('_'.join(sorted_symbols).encode()).hexdigest()}"
+        
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return cached_data
         
     results = []
     
@@ -165,6 +179,10 @@ def get_quotes(symbols):
         except Exception as e:
             print(f"Error processing {sym}: {e}")
             results.append(mapped)
+
+    # Cache the results for 2 minutes (120 seconds) to prevent spamming Yahoo Finance
+    if results:
+        cache.set(cache_key, results, timeout=120)
 
     return results
 

@@ -231,6 +231,27 @@ body {
   }
 }
 
+/* Skeleton loading */
+.skeleton {
+  background-color: #1a1a1a;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
 
+.skeleton::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+  animation: skeleton-shimmer 1.2s infinite;
+}
 
-
+@keyframes skeleton-shimmer {
+  100% {
+    left: 100%;
+  }
+}

@@ -1,6 +1,6 @@
 import React from "react";
 
-export const PrivacyPolicy = () => {
+export const SiteLegal = () => {
   return (  <div className="policy-text">
             <p><strong>1. Introduction</strong><br />
                 Welcome to InsightStox. We provide a platform designed to help individual investors track portfolios, analyze market data, and receive AI-driven investment insights. We are committed to operating within legal boundaries and ensuring the security of your financial data. This policy outlines our data practices in compliance with relevant regulations.</p>

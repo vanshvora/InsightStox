@@ -8,7 +8,7 @@ import Toggle from "../components/Toggle.jsx";
 import GoToArrow from "../assets/routeicon.svg";
 import { useAppContext } from "../context/AppContext";
 import { PolicyModal } from "../components/PolicyModal";
-import { PrivacyPolicy } from "../components/PrivacyPolicy";
+import { SiteLegal } from "../components/SiteLegal";
 import { TermsCondition } from "../components/TermsCondition";
 
 
@@ -244,7 +244,7 @@ export const DataPrivacy = () => {
             {/* 🟢 MODAL RENDERING: Display the modals at the bottom of the component */}
         <PolicyModal
             title="Privacy Policy"
-            content={<PrivacyPolicy />}
+            content={<SiteLegal />}
             isOpen={activeModal === "privacy"}
             onClose={closeModal}
         />

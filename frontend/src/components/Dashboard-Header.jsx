@@ -33,7 +33,8 @@ const DashboardHeader = ({ isWatchlistPage = false, onAddToWatchlist = null }) =
         return res.data.data.slice(0, 3); // show top 3 stocks
       }
       throw new Error('Invalid data format from server.');
-    }
+    },
+    refetchInterval: 120000
   });
 
   const error = queryError ? (queryError.response?.status === 401 ? 'Session expired. Please log in again.' : 'Failed to load market data.') : null;
@@ -178,7 +179,7 @@ const DashboardHeader = ({ isWatchlistPage = false, onAddToWatchlist = null }) =
                   >
                     <div className="d-stock-header">
                       <span className="d-stock-name">
-                        {stock.name ? stock.name : 'N/A'}
+                        {stock.name ? stock.name.replace(/^\^/, '') : 'N/A'}
                       </span>
                       <span className="d-stock-exchange">{stock.exchange || '-'}</span>
                     </div>

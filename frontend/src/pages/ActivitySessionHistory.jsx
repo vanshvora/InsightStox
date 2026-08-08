@@ -60,10 +60,9 @@ export const ActivitySessionHistory = () => {
   useEffect(() => {
     const fetchAllData = async () => {
       try {
-        // 1️⃣ Fetch Profile + Embedded Alerts & Activities
+        // 1️⃣ Fetch Profile
         const profileRes = await axios.get(`${BASE}/users/profile/`, { withCredentials: true });
         const user = profileRes.data?.data;
-        const history = profileRes.data?.history;
 
         if (user) {
           setUserInfo({
@@ -73,34 +72,14 @@ export const ActivitySessionHistory = () => {
           });
         }
 
-        if (history?.activities) {
-          updateRecentActivitiesData(
-            history.activities.map((activity) => ({
-              id: activity.createdAt,
-              action: activity.message,
-              date: new Date(activity.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
-            }))
-          );
-        }
-
-        if (history?.alerts) {
-          updateSecurityAlertsData(
-            history.alerts.map((alert) => ({
-              id: alert.createdAt,
-              text: alert.message,
-              date: new Date(alert.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
-            }))
-          );
-        }
-
         // 2️⃣ Fetch Active Sessions
         const sessionRes = await axios.get(`${BASE}/users/activity/`, { withCredentials: true });
-        const sessions = sessionRes.data?.activeSessions;
+        const sessionsData = sessionRes.data?.data?.activeSessions;
 
-        if (sessions) {
+        if (sessionsData) {
           setActiveSessions(
-            sessions.map((session) => ({
-              id: session.token || Math.random().toString(36).slice(2),
+            sessionsData.map((session) => ({
+              id: session.id,
               device: `${session.browser_type || "Unknown"} - ${session.os_type || "Unknown"}`,
               lastActive: session.last_active_time
                 ? new Date(session.last_active_time).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
@@ -111,28 +90,28 @@ export const ActivitySessionHistory = () => {
 
         // 3️⃣ Fetch All Security Alerts (Full)
         const alertsRes = await axios.get(`${BASE}/users/security-alerts/`, { withCredentials: true });
-        const alerts = alertsRes.data?.alerts;
+        const alertsData = alertsRes.data?.data;
 
-        if (alerts) {
+        if (alertsData) {
           updateSecurityAlertsData(
-            alerts.map((alert) => ({
-              id: alert.createdAt,
+            alertsData.map((alert) => ({
+              id: alert.id || alert.created_at,
               text: alert.message,
-              date: new Date(alert.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
+              date: new Date(alert.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
             }))
           );
         }
 
         // 4️⃣ Fetch Full Activity History
         const activityRes = await axios.get(`${BASE}/users/activity/all/`, { withCredentials: true });
-        const activities = activityRes.data?.history;
+        const activitiesData = activityRes.data?.data;
 
-        if (activities) {
+        if (activitiesData) {
           updateRecentActivitiesData(
-            activities.map((activity) => ({
-              id: activity.createdAt,
+            activitiesData.map((activity) => ({
+              id: activity.id || activity.created_at,
               action: activity.message,
-              date: new Date(activity.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
+              date: new Date(activity.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
             }))
           );
         }
@@ -151,7 +130,10 @@ export const ActivitySessionHistory = () => {
     setActiveSessions((prev) => prev.filter((s) => s.id !== sessionId));
 
     try {
-      await axios.post(`${BASE}/users/logout/session/`, { token: sessionId }, { withCredentials: true });
+      const response = await axios.post(`${BASE}/users/logout/session/`, { id: sessionId }, { withCredentials: true });
+      if (response.data?.is_current) {
+        window.location.href = "/";
+      }
     } catch (err) {
       console.error("Error signing out:", err);
     }
@@ -163,6 +145,7 @@ export const ActivitySessionHistory = () => {
 
     try {
       await axios.post(`${BASE}/users/logout/all/`, {}, { withCredentials: true });
+      window.location.href = "/";
     } catch (err) {
       console.error("Error signing out all:", err);
     }
