@@ -134,6 +134,7 @@ SENDER_EMAIL = os.environ.get('GOOGLE_USER_EMAIL', 'noreply@insightstox.com')
 
 # Groq AI
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
+GROQ_MODEL = os.environ.get('GROQ_MODEL', 'openai/gpt-oss-120b')
 
 # Google OAuth
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')

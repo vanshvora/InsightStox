@@ -27,7 +27,7 @@ class AIAgent:
         # Models
         self.llm = ChatGroq(
             api_key=settings.GROQ_API_KEY,
-            model="llama-3.3-70b-versatile",  # Upgraded model for better tool calling
+            model=getattr(settings, 'GROQ_MODEL', 'openai/gpt-oss-120b'),
             temperature=0,
             max_tokens=1500,
         )
@@ -65,7 +65,7 @@ class AIAgent:
         messages = state["messages"]
         last_message = messages[-1]
         
-        if last_message.tool_calls:
+        if getattr(last_message, 'tool_calls', None):
             return "tools"
         return END
 
@@ -92,7 +92,9 @@ class AIAgent:
             )
             return response["messages"][-1].content
         except Exception as e:
+            import traceback
             print(f"Agent error: {e}")
+            traceback.print_exc()
             return "I'm sorry, I'm having trouble connecting to my analysis systems right now."
 
 

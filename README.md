@@ -60,7 +60,8 @@ cp .env.example .env
 
 Make sure Docker Desktop is running, then from the root directory:
 ```bash
-docker-compose up --build
+docker-compose up --build (first time)
+docker-compose up
 ```
 Frontend will be available at: **http://localhost:5173**  
 Backend API runs at: **http://localhost:8000**
