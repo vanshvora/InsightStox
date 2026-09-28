@@ -93,7 +93,7 @@
 .watchlist-table-container {
     background-color: #0e0e0e;
     border-radius: 12px;
-    overflow: hidden;
+    overflow: visible;
     border: 3px solid #1e1e1e;
 }
 
@@ -702,4 +702,104 @@
             max-width:280px;
 
         }
+}
+
+/* Inline Alert Popup Styles */
+.inline-alert-popup {
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-right: 8px;
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 1.2rem;
+    width: 230px;
+    z-index: 10;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+    cursor: default;
+    color: #fff;
+    text-align: left;
+}
+
+.popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #333;
+}
+
+.close-popup-btn {
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+.close-popup-btn:hover {
+    color: #fff;
+}
+
+.popup-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.popup-group label {
+    font-size: 0.8rem;
+    color: #aaa;
+    font-weight: 500;
+}
+
+.popup-radio-group {
+    display: flex;
+    gap: 1rem;
+}
+
+.popup-radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.85rem;
+    color: #eee;
+    cursor: pointer;
+}
+
+.popup-input {
+    width: 100%;
+    padding: 0.6rem;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.popup-input:focus {
+    border-color: #00c853;
+}
+
+.popup-submit-btn {
+    width: 100%;
+    margin-top: 1.2rem;
+    padding: 0.6rem;
+    background: #fff;
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.popup-submit-btn:hover {
+    background: #e0e0e0;
 }

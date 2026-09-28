@@ -206,7 +206,7 @@ export const MyProfile = () => {
                                 <label>
                                     Password
                                 </label>
-                                {!isEditingPass && userDetails?.registrationMethod === "normal" && <button className="myPage_EditDetails" value="Edit" onClick={handleEditPass}> Edit </button>}
+                                {!isEditingPass && userDetails?.registrationMethod === "email" && <button className="myPage_EditDetails" value="Edit" onClick={handleEditPass}> Edit </button>}
                             </div>
 
                             <div className="myPage_InfValue">

@@ -13,12 +13,9 @@ export const PortfolioFundamentals = ({portfolioFundamentals}) => {
                         <th>Stock</th>
                         <th>Last Price</th>
                         <th>Market Cap</th>
-                        <th>EPS Est. Next Yr</th>
                         <th>Forward P/E</th>
-                        <th>Div Payment Date</th>
                         <th>Ex - Div Date</th>
                         <th>Div/Share</th>
-                        <th>Fwn Ann Div Rate</th>
                         <th>Fwn Ann Div Yield</th>
                         <th>Trl Ann Div Rate</th>
                         <th>Trl Ann Div Yield</th>
@@ -33,12 +30,9 @@ export const PortfolioFundamentals = ({portfolioFundamentals}) => {
                             <td onClick={() => navigate(`/stockdetails/${item.symbol}`)}>{item.symbol}</td>
                             <td>{item.lastPrice}</td>
                             <td>{item.marketCap}</td>
-                            <td>{item.epsEstimateNextYear}</td>
                             <td>{item.forwardPE}</td>
-                            <td>{item.divPaymentDate}</td>
                             <td>{item.exDivDate}</td>
                             <td>{item.dividendPerShare}</td>
-                            <td>{item.forwardAnnualDivRate}</td>
                             <td>{item.forwardAnnualDivYield}</td>
                             <td>{item.trailingAnnualDivRate}</td>
                             <td>{item.trailingAnnualDivYield}</td>

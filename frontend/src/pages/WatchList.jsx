@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import './WatchList.css'
 import Navbar from '../components/Navbar.jsx'
 import { useAppContext } from "../context/AppContext.jsx";
@@ -13,6 +13,7 @@ const Watchlist_API = `${BACKEND_URL}/dashboard/watchlist/`;
 
 
 const  Watchlist= () => {
+  const queryClient = useQueryClient();
   const { darkMode, setDarkMode, setIsSearchActive, ensureAuth, userDetails} = useAppContext();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [priceError, setPriceError] = useState('');
@@ -21,6 +22,9 @@ const  Watchlist= () => {
   const [searchData, setSearchData] = useState([]);   
   const [isFiltersApplied, setIsFiltersApplied] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeAlertPopup, setActiveAlertPopup] = useState(null);
+  const [alertTargetPrice, setAlertTargetPrice] = useState("");
+  const [alertCondition, setAlertCondition] = useState("ABOVE");
   const navigate = useNavigate();
   const { data: queryData = [], isLoading, refetch: fetchWatchlist } = useQuery({
     queryKey: ['watchlist'],
@@ -39,6 +43,14 @@ const  Watchlist= () => {
     }
   });
   
+  const { data: alertsData = [], refetch: fetchAlerts } = useQuery({
+    queryKey: ['price_alerts'],
+    queryFn: async () => {
+      const res = await axios.get(`${BACKEND_URL}/dashboard/alerts/`, { withCredentials: true });
+      return res.data?.data || [];
+    }
+  });
+
   const isWatchlistEmpty = !isLoading && watchlistData.length === 0;
   useEffect(() => {
     if (queryData && queryData.length > 0) {
@@ -59,7 +71,15 @@ const  Watchlist= () => {
       setwatchlistData(updatedData);
       setFilteredData(updatedFiltered);
       setSearchData(updatedSearch);
+      
+      // Forcefully update the React Query cache so Local Storage syncs instantly
+      queryClient.setQueryData(['watchlist'], (old) => 
+        old ? old.filter(stock => stock.symbol !== symbol) : []
+      );
+
       await axios.delete(`${BACKEND_URL}/dashboard/watchlist/remove/?symbol=${symbol}`, { withCredentials: true });
+      queryClient.invalidateQueries({ queryKey: ['watchlist'] });
+      fetchAlerts();
     }
     catch(err){
       console.error("Error removing stock:", err);
@@ -75,6 +95,7 @@ const  Watchlist= () => {
         { withCredentials: true }
       );
       console.log("Added to watchlist:", res.data);
+      queryClient.invalidateQueries({ queryKey: ['watchlist'] });
       await fetchWatchlist();
     } catch (err) {
       console.error("Error adding stock to watchlist:", err.response?.data || err);
@@ -83,6 +104,55 @@ const  Watchlist= () => {
     const handleStockClick = (symbol) => {
       navigate(`/stockdetails/${symbol}`);
     };  
+    
+    const toggleAlertPopup = (symbol) => {
+      if (activeAlertPopup === symbol) {
+        setActiveAlertPopup(null);
+      } else {
+        const existingAlert = alertsData.find(a => a.symbol === symbol && a.is_active);
+        setActiveAlertPopup(symbol);
+        if (existingAlert) {
+            setAlertTargetPrice(existingAlert.target_price);
+            setAlertCondition(existingAlert.condition);
+        } else {
+            setAlertTargetPrice("");
+            setAlertCondition("ABOVE");
+        }
+      }
+    };
+
+    const handleDeleteAlert = async (symbol) => {
+      const existingAlert = alertsData.find(a => a.symbol === symbol && a.is_active);
+      if (!existingAlert) return;
+      try {
+        await axios.delete(
+          `${BACKEND_URL}/dashboard/alerts/`,
+          { data: { id: existingAlert.id }, withCredentials: true }
+        );
+        setActiveAlertPopup(null);
+        fetchAlerts();
+        console.log("Alert deleted successfully");
+      } catch (err) {
+        console.error("Error deleting alert:", err);
+      }
+    };
+
+    const handleSetAlert = async (e, symbol) => {
+      e.preventDefault();
+      try {
+        await axios.post(
+          `${BACKEND_URL}/dashboard/alerts/`,
+          { symbol: symbol, target_price: alertTargetPrice, condition: alertCondition },
+          { withCredentials: true }
+        );
+        setActiveAlertPopup(null);
+        fetchAlerts();
+        console.log("Alert set successfully");
+      } catch (err) {
+        console.error("Error setting alert:", err);
+      }
+    };
+    
     const [filters, setFilters] = useState({
     dailyChange: '',
     dailyChangePercent: '',
@@ -324,7 +394,9 @@ const handleSearch = (value) => {
                     </td>
                   </tr>
                 ) : (
-                  searchData.map((stock) => (
+                  searchData.map((stock) => {
+                    const hasAlert = alertsData.some(a => a.symbol === stock.symbol && a.is_active);
+                    return (
                     <tr key={stock.symbol} className="table-stock" onClick={() => handleStockClick(stock.symbol)} style={{cursor: 'pointer'}}>
                       <td>
                         <div className="company-cell">
@@ -345,7 +417,15 @@ const handleSearch = (value) => {
                           {parseFloat(stock.change || 0) >= 0 ? '+' : ''}{parseFloat(stock.change || 0).toFixed(2)} ({parseFloat(stock.changePercent || 0) >= 0 ? '+' : ''}{parseFloat(stock.changePercent || 0).toFixed(2)}%)
                         </span>
                       </td>
-                      <td>
+                      <td style={{ position: 'relative' }}>
+                        <button 
+                          className="action-btn"
+                          aria-label={`Set alert for ${stock.symbol}`} 
+                          onClick={(e) => {e.stopPropagation(); toggleAlertPopup(stock.symbol);}}
+                          style={{ marginRight: '10px' }}
+                        >
+                          {hasAlert ? <i className="pi pi-pencil" style={{ color: '#eab308' }}></i> : <i className="pi pi-bell"></i>}
+                        </button>
                         <button 
                           className="action-btn"
                           aria-label={`Remove ${stock.symbol} from watchlist`} 
@@ -353,9 +433,66 @@ const handleSearch = (value) => {
                         >
                          <span>Remove</span>
                         </button>
+                        
+                        {/* Inline Alert Popup */}
+                        {activeAlertPopup === stock.symbol && (
+                          <div 
+                            className="inline-alert-popup" 
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="popup-header">
+                              Set Alert for {stock.symbol}
+                              <button aria-label="Close Alert" className="close-popup-btn" onClick={() => setActiveAlertPopup(null)}>
+                                <i className="pi pi-times"></i>
+                              </button>
+                            </div>
+                            <form onSubmit={(e) => handleSetAlert(e, stock.symbol)}>
+                              <div className="popup-group">
+                                <label style={{ marginBottom: '4px' }}>Condition</label>
+                                <div className="popup-radio-group">
+                                  <div className="filter-option">
+                                    <input 
+                                      type="radio" 
+                                      id={`above-${stock.symbol}`}
+                                      checked={alertCondition === 'ABOVE'} 
+                                      onChange={() => setAlertCondition('ABOVE')} 
+                                    />
+                                    <label htmlFor={`above-${stock.symbol}`}>Above</label>
+                                  </div>
+                                  <div className="filter-option">
+                                    <input 
+                                      type="radio" 
+                                      id={`below-${stock.symbol}`}
+                                      checked={alertCondition === 'BELOW'} 
+                                      onChange={() => setAlertCondition('BELOW')} 
+                                    />
+                                    <label htmlFor={`below-${stock.symbol}`}>Below</label>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="popup-group" style={{ marginTop: '0.8rem' }}>
+                                <label>Target (₹)</label>
+                                <input 
+                                  type="number" step="0.01" required placeholder="e.g. 3000"
+                                  value={alertTargetPrice} onChange={e => setAlertTargetPrice(e.target.value)}
+                                  className="popup-input"
+                                />
+                              </div>
+                              <div style={{ display: 'flex', gap: '10px', marginTop: '1.2rem' }}>
+                                <button type="submit" className="popup-submit-btn" style={{ margin: 0, flex: 1 }}>Save</button>
+                                {hasAlert && (
+                                  <button type="button" className="popup-submit-btn" style={{ margin: 0, flex: 1, background: '#ef4444', color: '#fff' }} onClick={() => handleDeleteAlert(stock.symbol)}>
+                                    Remove
+                                  </button>
+                                )}
+                              </div>
+                            </form>
+                          </div>
+                        )}
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>

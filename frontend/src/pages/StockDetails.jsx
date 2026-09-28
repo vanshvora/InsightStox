@@ -85,6 +85,7 @@ export const StockDetails = () => {
                 const raw = res?.data.data || res.data;
 
                 setStockData({
+                    inWatchlist: raw.in_watchlist,
                     priceInfo: {
                         currentPrice: roundTo(raw.priceInfo?.currentPrice),
                         previousClose: roundTo(raw.priceInfo?.previousClose),
@@ -99,20 +100,18 @@ export const StockDetails = () => {
                         changePercentage: formatPercentage(raw.priceInfo?.changePercentage),
                     },
                     fundamentals: {
-                        roceTTM: formatPercentage(raw.fundamentals?.roceTTM),
                         peRatioTTM: formatSmallNumber(raw.fundamentals?.peRatioTTM),
                         pbRatio: formatSmallNumber(raw.fundamentals?.pbRatio),
-                        industryPE: formatSmallNumber(raw.fundamentals?.industryPE),
                         debtToEquity: formatSmallNumber(raw.fundamentals?.debtToEquity),
                         roeTTM: formatPercentage(raw.fundamentals?.roeTTM),
                         epsTTM: formatSmallNumber(raw.fundamentals?.epsTTM),
                         dividendYield: formatPercentage(raw.fundamentals?.dividendYield),
                         bookValue: formatSmallNumber(raw.fundamentals?.bookValue),
-                        faceValue: formatSmallNumber(raw.fundamentals?.faceValue),
                     },
                     financials: {
                         revenueTTM: formatLargeNumber(raw.financials?.revenueTTM),
                         revenuePerShare: formatSmallNumber(raw.financials?.revenuePerShare),
+                        revenueGrowthQuater: formatPercentage(raw.financials?.revenueGrowthQuater),
                         earningGrowthQuater: formatPercentage(raw.financials?.earningGrowthQuater),
                         grossProfitTTM: formatLargeNumber(raw.financials?.grossProfitTTM),
                         ebitda: formatLargeNumber(raw.financials?.ebitda),
@@ -161,9 +160,10 @@ export const StockDetails = () => {
         getStockDetails();
     }, [symbol]);
 
-    const handleWatchlist = async () => {
+    const handleWatchlistAdd = async () => {
         try {
             await axios.post(`${BASE_URL}/dashboard/watchlist/add/`, { symbol: symbol }, { withCredentials: true });
+            setStockData(prev => ({ ...prev, inWatchlist: true }));
             Swal.fire({
                 toast: true,
                 position: "top",
@@ -180,6 +180,29 @@ export const StockDetails = () => {
         }
         catch (error) {
             console.error("Error in adding the stock to watchlist:", error);
+        }
+    };
+
+    const handleWatchlistRemove = async () => {
+        try {
+            await axios.post(`${BASE_URL}/dashboard/watchlist/remove/`, { symbol: symbol }, { withCredentials: true });
+            setStockData(prev => ({ ...prev, inWatchlist: false }));
+            Swal.fire({
+                toast: true,
+                position: "top",
+                icon: "success",
+                title: `${symbol} removed from watchlist!`,
+                iconColor: "#33ff57",
+                background: "#1a1a1a",
+                showConfirmButton: false,
+                timer: 3000,
+                customClass: {
+                    popup: "small-toast"
+                }
+            });
+        }
+        catch (error) {
+            console.error("Error in removing the stock from watchlist:", error);
         }
     };
 
@@ -206,9 +229,13 @@ export const StockDetails = () => {
 
                 <div className="stk-stock-head">
                     <div className="stk-stock-name">{symbol}</div>
-                    <button className="stk-add" value="Add" onClick={openAddModel}>Add</button>
-                    <button className="stk-rmv" value="Remove" onClick={openRmvModel}>Remove</button>
-                    <button className="stk-add-watchlist" val="Add-w" onClick={handleWatchlist}>Add to watchlist</button>
+                    <button className="stk-add" value="Add" onClick={openAddModel}>Buy</button>
+                    <button className="stk-rmv" value="Sell" onClick={openRmvModel}>Sell</button>
+                    {stockData?.inWatchlist ? (
+                        <button className="stk-add-watchlist" val="Rmv-w" onClick={handleWatchlistRemove}>Remove from watchlist</button>
+                    ) : (
+                        <button className="stk-add-watchlist" val="Add-w" onClick={handleWatchlistAdd}>Add to watchlist</button>
+                    )}
                 </div>
 
                 {showModal && stockData?.priceInfo && (
@@ -319,11 +346,6 @@ export const StockDetails = () => {
                     <div className="stk-info-left">
                         <FieldValue
                             className="stk-info"
-                            fieldname="ROCE (TTM)"
-                            value={stockData.fundamentals?.roceTTM}
-                        />
-                        <FieldValue
-                            className="stk-info"
                             fieldname="P/E Ratio (TTM)"
                             value={stockData.fundamentals?.peRatioTTM}
                         />
@@ -334,15 +356,9 @@ export const StockDetails = () => {
                         />
                         <FieldValue
                             className="stk-info"
-                            fieldname="Industry P/E"
-                            value={stockData.fundamentals?.industryPE}
-                        />
-                        <FieldValue
-                            className="stk-info"
                             fieldname="Debt to Equity"
                             value={stockData.fundamentals?.debtToEquity}
                         />
-
                     </div>
                     <div className="stk-info-right">
                         <FieldValue
@@ -365,12 +381,6 @@ export const StockDetails = () => {
                             fieldname="Book Value"
                             value={stockData.fundamentals?.bookValue}
                         />
-                        <FieldValue
-                            className="stk-info"
-                            fieldname="Face Value"
-                            value={stockData.fundamentals?.faceValue ?? "--"}
-                        />
-
                     </div>
                 </div>
 
@@ -393,7 +403,7 @@ export const StockDetails = () => {
                             <FieldValue
                                 className="stk-info"
                                 fieldname="Quarterly Revenue Growth (YOY)"
-                                value={stockData.financials?.earningGrowthQuater}
+                                value={stockData.financials?.revenueGrowthQuater}
                             />
                             <FieldValue
                                 className="stk-info"

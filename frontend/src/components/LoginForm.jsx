@@ -112,22 +112,11 @@ const LoginForm = ({ toggleForm, resetFormStates: parentResetFormStates }) => {
       const handleGoogleButtonClick = () => {
         setGoogleLoginLoading(true);
 
-        // Detect when window regains focus after popup closes
-        const handleFocusBack = () => {
-          setTimeout(() => {
-            setGoogleLoginLoading(false);
-          }, 1000);
-          window.removeEventListener("focus", handleFocusBack);
-        };
-
-        window.addEventListener("focus", handleFocusBack);
-
         try {
           googleLogin();
         } catch (error) {
           console.log("Google popup failed:", error);
           setGoogleLoginLoading(false);
-          window.removeEventListener("focus", handleFocusBack);
         }
       };
 /*----------------------------------- login handlers-------------------------------------------------------------------------- */

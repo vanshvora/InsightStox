@@ -7,7 +7,7 @@ from decimal import Decimal
 from .models import StockSummary
 from .services import add_buy_transaction, add_sell_transaction
 from utils.yahoo_finance import get_quotes
-from utils.price_store import price_store, currency_store
+from utils.price_store import price_store
 from users.views import _add_activity_history, _get_user_agent_info
 
 # Note: The actual AddTransaction endpoint was placed in dashboard in JS,
@@ -78,15 +78,13 @@ class PortfolioSummaryView(APIView):
             except:
                 current_price = float(holding.avg_price)
                 
-            currency = holding.stock.currency or 'USD'
-            exchange_rate = currency_store.get_rate(currency)
-            inr_price = current_price * exchange_rate
+            currency = holding.stock.currency or 'INR'
             
-            val = holding.current_holding * Decimal(str(inr_price))
+            val = holding.current_holding * Decimal(str(current_price))
             total_portfolio_value += val
             
             spent = holding.spent_amount if hasattr(holding, 'spent_amount') else holding.current_holding * Decimal(str(holding.avg_price))
-            total_spent_inr = spent * Decimal(str(exchange_rate))
+            total_spent_inr = spent
             
             pl = val - total_spent_inr
             pl_pct = (pl / total_spent_inr * 100) if total_spent_inr > 0 else 0
@@ -137,22 +135,43 @@ class PortfolioFundamentalsView(APIView):
             q['lastPrice'] = q.get('price', 'N/A')
             
             # Map extra fundamental fields that might not be in standard quotes
-            # yfinance info dict mapping
-            ticker = None
-            try:
-                import yfinance as yf
-                ticker = yf.Ticker(sym)
-                info = ticker.info
-                q['epsEstimateNextYear'] = info.get('epsEstimateNextYear', 'N/A')
-                q['divPaymentDate'] = info.get('dividendDate', 'N/A')
-                q['exDivDate'] = info.get('exDividendDate', 'N/A')
-                q['dividendPerShare'] = info.get('dividendRate', 'N/A')
-                q['forwardAnnualDivRate'] = info.get('dividendRate', 'N/A')
-                q['forwardAnnualDivYield'] = info.get('dividendYield', 'N/A')
-                q['trailingAnnualDivRate'] = info.get('trailingAnnualDividendRate', 'N/A')
-                q['trailingAnnualDivYield'] = info.get('trailingAnnualDividendYield', 'N/A')
-            except:
-                pass
+            from utils.price_store import fundamental_store
+            import yfinance as yf
+            
+            funds = fundamental_store.get(sym)
+            if not funds:
+                try:
+                    info = yf.Ticker(sym).info
+                    funds = {
+                        'epsEstimateNextYear': info.get('epsEstimateNextYear', 'N/A'),
+                        'divPaymentDate': info.get('dividendDate', 'N/A'),
+                        'exDivDate': info.get('exDividendDate', 'N/A'),
+                        'dividendPerShare': info.get('dividendRate', 'N/A'),
+                        'forwardAnnualDivRate': info.get('dividendRate', 'N/A'),
+                        'forwardAnnualDivYield': info.get('dividendYield', 'N/A'),
+                        'trailingAnnualDivRate': info.get('trailingAnnualDividendRate', 'N/A'),
+                        'trailingAnnualDivYield': info.get('trailingAnnualDividendYield', 'N/A'),
+                        'forwardPE': info.get('forwardPE', 'N/A'),
+                        'priceToBook': info.get('priceToBook', 'N/A'),
+                    }
+                    fundamental_store.set(sym, funds)
+                except Exception as e:
+                    print(f"Lazy fetch failed for {sym}: {e}")
+                    funds = {}
+            
+            if funds:
+                q.update(funds)
+            else:
+                q['epsEstimateNextYear'] = 'N/A'
+                q['divPaymentDate'] = 'N/A'
+                q['exDivDate'] = 'N/A'
+                q['dividendPerShare'] = 'N/A'
+                q['forwardAnnualDivRate'] = 'N/A'
+                q['forwardAnnualDivYield'] = 'N/A'
+                q['trailingAnnualDivRate'] = 'N/A'
+                q['trailingAnnualDivYield'] = 'N/A'
+                q['forwardPE'] = 'N/A'
+                q['priceToBook'] = 'N/A'
                 
             results.append(q)
             

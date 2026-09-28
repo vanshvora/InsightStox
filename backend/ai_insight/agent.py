@@ -25,12 +25,21 @@ class AIAgent:
         self.tool_node = ToolNode(self.tools)
         
         # Models
-        self.llm = ChatGroq(
+        primary_llm = ChatGroq(
             api_key=settings.GROQ_API_KEY,
             model=getattr(settings, 'GROQ_MODEL', 'openai/gpt-oss-120b'),
             temperature=0,
             max_tokens=1500,
         )
+        
+        fallback_llm = ChatGroq(
+            api_key=settings.GROQ_API_KEY,
+            model=getattr(settings, 'GROQ_FALLBACK_MODEL', 'openai/gpt-oss-20b'),
+            temperature=0,
+            max_tokens=1500,
+        )
+        
+        self.llm = primary_llm.with_fallbacks([fallback_llm])
         self.llm_with_tools = self.llm.bind_tools(self.tools)
         
         # System Prompts
@@ -69,10 +78,8 @@ class AIAgent:
             return "tools"
         return END
 
-    def invoke(self, message: str, user_email: str, history: list = None):
-        """Invoke the agent with a user message."""
-        
-        # Build the message history
+    def stream(self, message: str, user_email: str, history: list = None):
+        """Stream the agent response."""
         messages = []
         if history:
             from langchain_core.messages import AIMessage
@@ -81,21 +88,20 @@ class AIAgent:
                     messages.append(HumanMessage(content=msg.get('content', '')))
                 elif msg.get('role') == 'assistant':
                     messages.append(AIMessage(content=msg.get('content', '')))
-        
-        # We append user_email to context so LLM knows how to call portfolio_analysis_tool
+                    
         context_msg = f"[System Context: The current user's email is {user_email}. If they ask about their portfolio, use this email.]\n\nUser: {message}"
         messages.append(HumanMessage(content=context_msg))
         
         try:
-            response = self.graph.invoke(
-                {"messages": messages},
-            )
-            return response["messages"][-1].content
+            for msg, metadata in self.graph.stream({"messages": messages}, stream_mode="messages"):
+                # We only want to stream content from the LLM, not tools
+                if msg.content and isinstance(msg.content, str) and metadata.get("langgraph_node") == "call_model":
+                    yield msg.content
         except Exception as e:
             import traceback
-            print(f"Agent error: {e}")
+            print(f"Agent stream error: {e}")
             traceback.print_exc()
-            return "I'm sorry, I'm having trouble connecting to my analysis systems right now."
+            yield "I'm sorry, I'm having trouble connecting to my analysis systems right now."
 
 
 # Global instance

@@ -148,7 +148,7 @@ export default function PortfolioChart() {
       labels,
       datasets: [
         {
-          label: "Portfolio Value",
+          label: "Profit / Loss",
           data: values,
           borderColor: "#00c853",
           borderWidth: 2,
@@ -190,7 +190,7 @@ export default function PortfolioChart() {
         legend: { display: false },
         title: {
           display: true,
-          text: "Portfolio Performance",
+          text: "Profit / Loss History",
           color: "#00C853",
           font: { size: 22 },
         },
@@ -248,7 +248,7 @@ export default function PortfolioChart() {
           },
         },
         y: {
-          min: Math.max(0, minVal - pad),
+          min: minVal - pad,
           max: maxVal + pad,
           ticks: {
             color: "#fff",

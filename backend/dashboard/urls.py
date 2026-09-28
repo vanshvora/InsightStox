@@ -13,6 +13,9 @@ urlpatterns = [
     path('watchlist/add/', views.AddToWatchlistView.as_view(), name='add_watchlist'),
     path('watchlist/remove/', views.RemoveFromWatchlistView.as_view(), name='remove_watchlist'),
     
+    path('alerts/', views.PriceAlertView.as_view(), name='price_alerts'),
+    path('alerts/<int:alert_id>/', views.PriceAlertView.as_view(), name='delete_price_alert'),
+    
     path('allocation/', views.StockAllocationView.as_view(), name='allocation'),
     
     path('market/gainers/', views.MarketGainersView.as_view(), name='market_gainers'),

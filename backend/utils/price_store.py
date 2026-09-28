@@ -1,72 +1,38 @@
 import time
 import requests
+from django.core.cache import cache
+
 
 class PriceStore:
-    """In-memory cache for stock prices to reduce Yahoo Finance API calls."""
+    """Distributed cache for stock prices to reduce Yahoo Finance API calls."""
     
     def __init__(self):
-        self._store = {}
         self._ttl = 15 * 60  # 15 minutes in seconds
         
     def get(self, symbol):
-        data = self._store.get(symbol)
-        if not data:
-            return None
-            
-        # Check if expired
-        if time.time() - data['timestamp'] > self._ttl:
-            del self._store[symbol]
-            return None
-            
-        return data['price']
+        return cache.get(f"stock_price_{symbol}")
         
     def set(self, symbol, price):
-        self._store[symbol] = {
-            'price': price,
-            'timestamp': time.time()
-        }
+        cache.set(f"stock_price_{symbol}", price, timeout=self._ttl)
         
     def clear(self):
-        self._store.clear()
+        pass
+
+class FundamentalStore:
+    """Distributed cache for slow fundamental data (EPS, Dividends)."""
+    
+    def __init__(self):
+        self._ttl = 24 * 60 * 60  # 24 hours
+        
+    def get(self, symbol):
+        return cache.get(f"stock_fundamentals_{symbol}")
+        
+    def set(self, symbol, data):
+        cache.set(f"stock_fundamentals_{symbol}", data, timeout=self._ttl)
+
+fundamental_store = FundamentalStore()
 
 # Global singleton
 price_store = PriceStore()
 
 
-class CurrencyStore:
-    """In-memory cache for currency exchange rates."""
-    
-    def __init__(self):
-        self._store = {}
-        self._ttl = 24 * 60 * 60  # 24 hours
-        
-    def get_rate(self, currency):
-        if currency == 'INR':
-            return 1.0
-            
-        data = self._store.get(currency)
-        if data and (time.time() - data['timestamp'] < self._ttl):
-            return data['rate']
-            
-        # Fetch new rate
-        try:
-            from django.conf import settings
-            res = requests.get(settings.RATE_EXCHANGE_URL, timeout=5)
-            rates = res.json().get('rates', {})
-            rate = rates.get(currency)
-            if rate:
-                # API returns e.g. 1 INR = 0.012 USD
-                # We need multiplier to convert USD to INR, so 1 / rate
-                multiplier = 1.0 / rate
-                self._store[currency] = {
-                    'rate': multiplier,
-                    'timestamp': time.time()
-                }
-                return multiplier
-        except Exception as e:
-            print(f"Error fetching exchange rate for {currency}: {e}")
-            
-        return 1.0  # Fallback
-
-# Global singleton
-currency_store = CurrencyStore()

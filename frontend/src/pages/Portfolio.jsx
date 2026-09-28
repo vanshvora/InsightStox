@@ -17,7 +17,7 @@ export const Portfolio = () => {
     axios.defaults.withCredentials = true;
     const { userDetails, setIsSearchActive, ensureAuth } = useAppContext();
     const [darkMode, setDarkMode] = useState(true);
-    const [selectedMode, setSelectedMode] = useState("summary");
+    const [selectedMode, setSelectedMode] = useState("holdings");
 
     const handleMode = (mode) => {
         setSelectedMode(mode);
@@ -179,8 +179,8 @@ export const Portfolio = () => {
 
                 <div className="portfolio-mode-btns">
                     <div className="portfolio-toggle-div">
-                        <button className={`portfolio-btn ${selectedMode === "summary" ? "active" : ""}`} onClick={() => handleMode("summary")}>Summary</button>
                         <button className={`portfolio-btn ${selectedMode === "holdings" ? "active" : ""}`} onClick={() => handleMode("holdings")}>Holdings</button>
+                        <button className={`portfolio-btn ${selectedMode === "summary" ? "active" : ""}`} onClick={() => handleMode("summary")}>Summary</button>
                         <button className={`portfolio-btn ${selectedMode === "fundamentals" ? "active" : ""}`} onClick={() => handleMode("fundamentals")}>Fundamentals</button>
                     </div>
 

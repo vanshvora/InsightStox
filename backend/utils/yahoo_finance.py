@@ -28,7 +28,7 @@ def map_stock_data(info):
     def format_large_number(val):
         if val is None: return 'N/A'
         try:
-            return f"{int(val):,}"
+            return str(int(val))
         except:
             return str(val)
 
@@ -145,6 +145,29 @@ def get_quotes(symbols):
                 
                 try: mapped['currency'] = str(fi.get('currency', 'N/A'))
                 except: pass
+                
+                try: mapped['dayHigh'] = f"{float(fi['dayHigh']):.2f}"
+                except: pass
+                
+                try: mapped['dayLow'] = f"{float(fi['dayLow']):.2f}"
+                except: pass
+                
+                if mapped.get('dayHigh') != 'N/A' and mapped.get('dayLow') != 'N/A':
+                    mapped['dayRange'] = f"{mapped['dayLow']} - {mapped['dayHigh']}"
+                
+                try: mapped['fiftyTwoWeekHigh'] = f"{float(fi['year_high']):.2f}"
+                except: pass
+                
+                try: mapped['fiftyTwoWeekLow'] = f"{float(fi['year_low']):.2f}"
+                except: pass
+                
+                if mapped.get('fiftyTwoWeekHigh') != 'N/A' and mapped.get('fiftyTwoWeekLow') != 'N/A':
+                    mapped['fiftyTwoWeekRange'] = f"{mapped['fiftyTwoWeekLow']} - {mapped['fiftyTwoWeekHigh']}"
+                    
+                try: 
+                    mc = int(fi['market_cap'])
+                    mapped['marketCap'] = str(mc)
+                except: pass
 
             # Fallback to yf.download data if fast_info failed or was incomplete!
             if data is not None and not data.empty:
@@ -198,9 +221,30 @@ def search_stock(query):
         
         if response.status_code == 200:
             data = response.json()
-            # The search API returns a list of quotes and news
+            quotes = data.get('quotes', [])
+            indian_quotes = [
+                q for q in quotes 
+                if (q.get('exchange') in ['NSI', 'BSE'] or q.get('symbol', '').endswith(('.NS', '.BO'))) 
+                and q.get('quoteType') == 'EQUITY'
+            ]
+            
+            # Smart Fallback: If Yahoo Finance returned no Indian equities,
+            # it might be because the query is too short (e.g., "d") and US stocks pushed Indian stocks out of the top 7.
+            # Retry with " india" appended.
+            if not indian_quotes and "india" not in query.lower():
+                fallback_url = f"https://query2.finance.yahoo.com/v1/finance/search?q={query} india"
+                fallback_response = requests.get(fallback_url, headers=headers, timeout=5)
+                if fallback_response.status_code == 200:
+                    fallback_data = fallback_response.json()
+                    fallback_quotes = fallback_data.get('quotes', [])
+                    indian_quotes = [
+                        q for q in fallback_quotes 
+                        if (q.get('exchange') in ['NSI', 'BSE'] or q.get('symbol', '').endswith(('.NS', '.BO'))) 
+                        and q.get('quoteType') == 'EQUITY'
+                    ]
+
             return {
-                'quotes': data.get('quotes', []),
+                'quotes': indian_quotes,
                 'news': data.get('news', [])
             }
     except Exception as e:

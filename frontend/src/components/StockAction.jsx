@@ -91,8 +91,11 @@ const StockAction = ({ action, handler, symbol, currPrice, priceChange, pricePer
                 { withCredentials: true }
             );
 
-            PORTFOLIO_QUERY_KEYS.forEach((queryKey) =>
-                queryClient.invalidateQueries({ queryKey })
+            // Await the refetch of all portfolio queries so the cache and Local Storage are perfectly updated before showing success
+            await Promise.all(
+                PORTFOLIO_QUERY_KEYS.map((queryKey) =>
+                    queryClient.invalidateQueries({ queryKey })
+                )
             );
 
             Swal.fire({
@@ -138,7 +141,7 @@ const StockAction = ({ action, handler, symbol, currPrice, priceChange, pricePer
                         : "linear-gradient(#310700ff 14%, #0e0e0e 14%)",
                 }}
             >
-                <h2>{action === "BUY" ? "Add to Portfolio" : "Remove from Portfolio"}</h2>
+                <h2>{action === "BUY" ? "Buy Stock" : "Sell Stock"}</h2>
 
                 <div className="model-name-toggle">
                     <div className="model-stock-symbol">{symbol}</div>
@@ -147,13 +150,13 @@ const StockAction = ({ action, handler, symbol, currPrice, priceChange, pricePer
                             className={`model-buy ${action === "BUY" ? "active-buy" : ""}`}
                             onClick={toggleModel}
                         >
-                            Add
+                            Buy
                         </span>
                         <span
                             className={`model-sell ${action === "SELL" ? "active-sell" : ""}`}
                             onClick={toggleModel}
                         >
-                            Rmv
+                            Sell
                         </span>
                     </div>
                 </div>

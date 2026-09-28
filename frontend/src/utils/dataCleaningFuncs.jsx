@@ -5,9 +5,7 @@ export const roundTo = (num, decimals = 2) => {
 
 export const formatPercentage = (num, decimals = 2) => {
     if (num === null || num === undefined || isNaN(Number(num))) return "--";
-    const val = Number(num);
-    const percent = Math.abs(val) < 1 ? val * 100 : val;
-    return percent.toFixed(decimals);
+    return Number(num).toFixed(decimals);
 };
 
 export const formatLargeNumber = (num) => {

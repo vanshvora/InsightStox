@@ -48,31 +48,59 @@ useEffect(() => {
             
         setMessages((prev) => [...prev, userMsg, typingMsg]);
         try{
-                const res = await axios.post(import.meta.env.VITE_BACKEND_LINK + "/ai-insight/message/", {
+            const response = await fetch(import.meta.env.VITE_BACKEND_LINK + "/ai-insight/message/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                credentials: "include",
+                body: JSON.stringify({
                     message: userMsg,
                     history: history
-                }, {
-                    withCredentials: true
-                });
-                console.log("AI Reply:", res.data.reply);
-                        // Render markdown (GFM) and allow safe raw HTML (tables) by
-                        // enabling rehype-raw and configuring rehype-sanitize to permit
-                        // table-related tags.
-                        const sanitizeOptions = {
-                            tagNames: ['table','thead','tbody','tr','th','td','strong','em','p','ul','ol','li','a','blockquote','code','pre','h1','h2','h3','h4','h5','h6'],
-                            attributes: {
-                                a: ['href', 'title', 'target', 'rel'],
-                                table: ['class'],
-                                '*': ['class']
-                            }
-                        };
+                })
+            });
 
-            setMessages((prev) => [...prev.filter((msg)=>msg.id !== "typing"), { id: Date.now(), text: res.data.reply, sender: 'bot' }]);
+            if (!response.ok) {
+                throw new Error("Failed to get response");
+            }
+
+            const botMsgId = Date.now();
+            setMessages((prev) => [...prev.filter((msg)=>msg.id !== "typing"), { id: botMsgId, text: "", sender: 'bot' }]);
             setIsLoading(false);
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let done = false;
+            
+            // Dynamic delay for ChatGPT effect: start slow, accelerate fast!
+            let currentDelay = 40; 
+
+            while (!done) {
+                const { value, done: readerDone } = await reader.read();
+                done = readerDone;
+                if (value) {
+                    const chunk = decoder.decode(value, { stream: true });
+                    
+                    // Render word by word instead of character by character to speed it up!
+                    const tokens = chunk.split(/(\s+)/);
+                    for (let i = 0; i < tokens.length; i++) {
+                        if (!tokens[i]) continue;
+                        setMessages((prev) => 
+                            prev.map((msg) => 
+                                msg.id === botMsgId ? { ...msg, text: msg.text + tokens[i] } : msg
+                            )
+                        );
+                        // Speed up gradually by decreasing the delay until we hit 2ms
+                        currentDelay = Math.max(2, currentDelay - 0.5);
+                        await new Promise(resolve => setTimeout(resolve, currentDelay));
+                    }
+                }
+            }
         }catch(err){
             console.error("Error sending message:", err);
             setMessages((prev) => [...prev.filter((msg) => msg.id !== "typing"), { 
-                text: err.message, 
+                id: Date.now(),
+                text: err.message || "Something went wrong", 
                 sender: 'bot',
                 typing: false
             }]);

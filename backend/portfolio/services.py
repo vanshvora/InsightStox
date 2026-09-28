@@ -4,7 +4,6 @@ from django.utils import timezone
 
 from .models import Stock, StockSummary, UserTransaction, PortfolioValuationDaily
 from utils.yahoo_finance import get_quotes
-from utils.price_store import currency_store
 
 
 def _snapshot_portfolio_valuation(user):

@@ -8,9 +8,69 @@ from datetime import timedelta, date
 
 from .services import get_current_portfolio_valuation, calculate_stock_allocation
 from portfolio.models import Stock, StockSummary, UserWatchlist, PortfolioValuationDaily, PortfolioValuationHourly
+from .models import PriceAlert
 from utils.yahoo_finance import search_stock, get_quotes
 import yfinance as yf
 from users.views import _add_activity_history, _get_user_agent_info
+
+
+class PriceAlertView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        alerts = PriceAlert.objects.filter(user=request.user).select_related('stock')
+        data = []
+        for a in alerts:
+            data.append({
+                'id': a.id,
+                'symbol': a.stock.symbol,
+                'target_price': float(a.target_price),
+                'condition': a.condition,
+                'is_active': a.is_active,
+                'last_triggered_at': a.last_triggered_at.isoformat() if a.last_triggered_at else None,
+                'created_at': a.created_at.isoformat()
+            })
+        return Response({'success': True, 'data': data})
+
+    def post(self, request):
+        symbol = request.data.get('symbol', '').upper()
+        target_price = request.data.get('target_price')
+        condition = request.data.get('condition')
+
+        if not symbol or not target_price or condition not in ['ABOVE', 'BELOW']:
+            return Response({'success': False, 'message': 'Invalid input'}, status=status.HTTP_400_BAD_REQUEST)
+
+        stock, created = Stock.objects.get_or_create(symbol=symbol)
+        if created:
+            quotes = get_quotes([symbol])
+            if quotes:
+                stock.short_name = quotes[0].get('name')
+                stock.long_name = quotes[0].get('longName')
+                stock.exchange = quotes[0].get('exchange')
+                stock.currency = quotes[0].get('currency')
+                stock.save()
+
+        # Delete any existing alert for this stock (one per stock per user)
+        PriceAlert.objects.filter(user=request.user, stock=stock).delete()
+
+        # Create new alert
+        alert = PriceAlert.objects.create(
+            user=request.user,
+            stock=stock,
+            condition=condition,
+            target_price=target_price,
+            is_active=True
+        )
+        return Response({'success': True, 'message': 'Alert set successfully', 'id': alert.id})
+
+    def delete(self, request, alert_id=None):
+        if not alert_id:
+            alert_id = request.data.get('id')
+        if not alert_id:
+            return Response({'success': False, 'message': 'Missing alert ID'}, status=status.HTTP_400_BAD_REQUEST)
+        PriceAlert.objects.filter(id=alert_id, user=request.user).delete()
+        return Response({'success': True, 'message': 'Alert deleted successfully'})
+
 
 
 def _safe_float(value, default=None):
@@ -111,7 +171,7 @@ class ValuationView(APIView):
         from portfolio.models import StockSummary
         from decimal import Decimal
         from utils.yahoo_finance import get_quotes
-        from utils.price_store import price_store, currency_store
+        from utils.price_store import price_store
         from django.core.cache import cache
         
         cache_key = f"user_valuation_{request.user.id}"
@@ -150,8 +210,7 @@ class ValuationView(APIView):
         
         for holding in holdings:
             sym = holding.stock.symbol
-            currency = holding.stock.currency or 'USD'
-            exchange_rate = currency_store.get_rate(currency)
+            currency = holding.stock.currency or 'INR'
             
             q = quote_map.get(sym, {})
             current_price_str = q.get('price', 'N/A')
@@ -168,11 +227,8 @@ class ValuationView(APIView):
             except:
                 prev_close = current_price
                 
-            inr_price = current_price * exchange_rate
-            inr_prev = prev_close * exchange_rate
-            
-            val = holding.current_holding * Decimal(str(inr_price))
-            prev_val = holding.current_holding * Decimal(str(inr_prev))
+            val = holding.current_holding * Decimal(str(current_price))
+            prev_val = holding.current_holding * Decimal(str(prev_close))
             
             # Use spent_amount for precise investment calculation if available, or avg_price
             spent = holding.spent_amount if hasattr(holding, 'spent_amount') else holding.current_holding * Decimal(str(holding.avg_price))
@@ -180,9 +236,9 @@ class ValuationView(APIView):
             # If the user bought this stock today, their personal "Today's Return" should be based on their purchase price
             # rather than the previous day's close.
             if holding.stock_id in today_tx_stocks:
-                prev_val = spent * Decimal(str(exchange_rate))
+                prev_val = spent
                 
-            total_investment += spent * Decimal(str(exchange_rate))
+            total_investment += spent
             current_value += val
             today_return += (val - prev_val)
             
@@ -266,6 +322,8 @@ class RemoveFromWatchlistView(APIView):
         try:
             stock = Stock.objects.get(symbol=symbol)
             UserWatchlist.objects.filter(user=request.user, stock=stock).delete()
+            # Also clean up any associated price alerts
+            PriceAlert.objects.filter(user=request.user, stock=stock).delete()
             
             browser, os_type = _get_user_agent_info(request)
             token = request.auth.token if request.auth and hasattr(request.auth, 'token') else request.META.get('HTTP_AUTHORIZATION', '').replace('Token ', '')
@@ -369,8 +427,8 @@ class PortfolioValuationHistoryView(APIView):
             for h in history:
                 by_date[h.date.isoformat()] = float(h.portfolio_valuation)
 
-            from dashboard.services import get_current_portfolio_valuation
-            current_val = float(get_current_portfolio_valuation(request.user))
+            from dashboard.services import get_current_portfolio_profit_loss
+            current_val = float(get_current_portfolio_profit_loss(request.user))
             today_key = now.date().isoformat()
             by_date[today_key] = current_val
 
@@ -379,7 +437,7 @@ class PortfolioValuationHistoryView(APIView):
             # Baseline at 0 the day before the first real point so new buys show as a jump
             if data:
                 first_date = date.fromisoformat(data[0]['date'])
-                if data[0]['valuation'] > 0:
+                if data[0]['valuation'] != 0:
                     baseline = (first_date - timedelta(days=1)).isoformat()
                     if baseline not in by_date:
                         data.insert(0, {'date': baseline, 'valuation': 0.0})
@@ -422,7 +480,7 @@ class StockDetailsView(APIView):
                 change = price - prev_close
                 change_pct = (change / prev_close) * 100 if prev_close else 0
 
-            roe = _safe_float(info.get('returnOnEquity'), 0) or 0
+            roe = (_safe_float(info.get('returnOnEquity'), 0) or 0) * 100
             data = {
                 'in_watchlist': in_watchlist,
                 'current_holding': holding,
@@ -440,21 +498,19 @@ class StockDetailsView(APIView):
                     'changePercentage': change_pct if change_pct is not None else 0,
                 },
                 'fundamentals': {
-                    'roceTTM': roe * 1.2,
                     'peRatioTTM': _safe_float(info.get('trailingPE')),
                     'pbRatio': _safe_float(info.get('priceToBook')),
-                    'industryPE': _safe_float(info.get('trailingPE')),
                     'debtToEquity': _safe_float(info.get('debtToEquity')),
                     'roeTTM': roe,
                     'epsTTM': _safe_float(info.get('trailingEps')),
                     'dividendYield': _safe_float(info.get('dividendYield')),
                     'bookValue': _safe_float(info.get('bookValue')),
-                    'faceValue': _safe_float(info.get('bookValue')),
                 },
                 'financials': {
                     'revenueTTM': _safe_float(info.get('totalRevenue')),
                     'revenuePerShare': _safe_float(info.get('revenuePerShare')),
-                    'earningGrowthQuater': _safe_float(info.get('earningsQuarterlyGrowth')),
+                    'revenueGrowthQuater': _safe_float(info.get('revenueGrowth')) * 100 if _safe_float(info.get('revenueGrowth')) else None,
+                    'earningGrowthQuater': _safe_float(info.get('earningsQuarterlyGrowth')) * 100 if _safe_float(info.get('earningsQuarterlyGrowth')) else None,
                     'grossProfitTTM': _safe_float(info.get('grossProfits')),
                     'ebitda': _safe_float(info.get('ebitda')),
                     'netIncome': _safe_float(info.get('netIncomeToCommon')),
@@ -469,9 +525,9 @@ class StockDetailsView(APIView):
                     'bookValuePerShare': _safe_float(info.get('bookValue')),
                 },
                 'profitability': {
-                    'profitMargin': _safe_float(info.get('profitMargins')),
-                    'operatingMargin': _safe_float(info.get('operatingMargins')),
-                    'returnOnAssets': _safe_float(info.get('returnOnAssets')),
+                    'profitMargin': _safe_float(info.get('profitMargins')) * 100 if _safe_float(info.get('profitMargins')) else None,
+                    'operatingMargin': _safe_float(info.get('operatingMargins')) * 100 if _safe_float(info.get('operatingMargins')) else None,
+                    'returnOnAssets': _safe_float(info.get('returnOnAssets')) * 100 if _safe_float(info.get('returnOnAssets')) else None,
                     'returnOnEquity': roe,
                 },
                 'cashFlow': {

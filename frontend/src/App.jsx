@@ -14,6 +14,8 @@ import AiInsight from './pages/AiInsight';
 import Watchlist from './pages/WatchList';
 import {createBrowserRouter,RouterProvider} from "react-router-dom";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import { DataPrivacy } from './pages/DataPrivacy'; 
 import { ActivitySessionHistory } from './pages/ActivitySessionHistory';
 
@@ -21,9 +23,15 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutes cache
+      gcTime: 24 * 60 * 60 * 1000, // 24 hours garbage collection
       refetchOnWindowFocus: false,
     },
   },
+});
+
+const persister = createSyncStoragePersister({
+  storage: window.localStorage,
+  throttleTime: 0,
 });
 
 const router = createBrowserRouter(
@@ -82,9 +90,12 @@ function App() {
     });
   }, []);
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider 
+      client={queryClient}
+      persistOptions={{ persister }}
+    >
          <RouterProvider router={router} />
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   )
 }
 
