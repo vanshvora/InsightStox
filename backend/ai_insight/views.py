@@ -1,7 +1,7 @@
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.http import StreamingHttpResponse
+import logfire
 from .agent import agent
 
 from rest_framework.permissions import IsAuthenticated
@@ -23,12 +23,10 @@ class SendMessageView(APIView):
         history = request.data.get('history', [])
         
         try:
-            # We pass the conversation history to the agent to provide context
-            def generate():
-                for chunk in agent.stream(message_text, request.user.email, history=history):
-                    yield chunk
+            with logfire.span("ai.response", user=request.user.email):
+                reply = agent.invoke(message_text, request.user.email, history=history)
 
-            return StreamingHttpResponse(generate(), content_type='text/plain')
+            return Response({'success': True, 'reply': reply})
             
         except Exception as e:
             return Response(

@@ -78,6 +78,28 @@ class AIAgent:
             return "tools"
         return END
 
+    def invoke(self, message: str, user_email: str, history: list = None):
+        messages = []
+        if history:
+            from langchain_core.messages import AIMessage
+            for msg in history:
+                if msg.get('role') == 'user':
+                    messages.append(HumanMessage(content=msg.get('content', '')))
+                elif msg.get('role') == 'assistant':
+                    messages.append(AIMessage(content=msg.get('content', '')))
+
+        context_msg = f"[System Context: The current user's email is {user_email}. If they ask about their portfolio, use this email.]\n\nUser: {message}"
+        messages.append(HumanMessage(content=context_msg))
+
+        try:
+            response = self.graph.invoke({"messages": messages})
+            return response["messages"][-1].content
+        except Exception as e:
+            import traceback
+            print(f"Agent error: {e}")
+            traceback.print_exc()
+            return "I'm sorry, I'm having trouble connecting to my analysis systems right now."
+
     def stream(self, message: str, user_email: str, history: list = None):
         """Stream the agent response."""
         messages = []

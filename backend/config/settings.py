@@ -163,3 +163,13 @@ MAX_UPLOAD_SIZE = 500 * 1024  # 500KB
 # Media files (temp uploads)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+LOGFIRE_TOKEN = os.environ.get('LOGFIRE_TOKEN', '')
+LOGFIRE_SERVICE_NAME = os.environ.get('LOGFIRE_SERVICE_NAME', 'insightstox-backend')
+LOGFIRE_ENVIRONMENT = os.environ.get('LOGFIRE_ENVIRONMENT', os.environ.get('ENV', 'development'))
+
+try:
+    from .logfire_setup import setup_logfire
+    setup_logfire()
+except Exception:
+    pass
