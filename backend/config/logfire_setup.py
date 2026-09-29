@@ -19,8 +19,8 @@ def setup_logfire():
     env = os.environ.get("LOGFIRE_ENVIRONMENT", os.environ.get("ENV", "development"))
 
     os.environ.setdefault("OTEL_PYTHON_DJANGO_EXCLUDED_URLS", "health,token/check,admin/jsi18n")
-    os.environ.setdefault("OTEL_PYTHON_REQUESTS_EXCLUDED_URLS", "smith.langchain.com,health")
-    os.environ.setdefault("OTEL_PYTHON_HTTPX_EXCLUDED_URLS", "smith.langchain.com,health")
+    os.environ.setdefault("OTEL_PYTHON_REQUESTS_EXCLUDED_URLS", "health")
+    os.environ.setdefault("OTEL_PYTHON_HTTPX_EXCLUDED_URLS", "health")
 
     logfire.configure(
         token=token,
@@ -33,11 +33,11 @@ def setup_logfire():
     except Exception:
         pass
     try:
-        logfire.instrument_requests(excluded_urls="smith.langchain.com,health")
+        logfire.instrument_requests(excluded_urls="health")
     except Exception:
         pass
     try:
-        logfire.instrument_httpx(excluded_urls="smith.langchain.com,health")
+        logfire.instrument_httpx(excluded_urls="health")
     except Exception:
         pass
     try:

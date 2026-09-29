@@ -3,6 +3,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from langgraph.graph import StateGraph, MessagesState, START, END
 from langgraph.prebuilt import ToolNode
 from django.conf import settings
+import logfire
 
 from .tools.market_news import market_news_tool
 from .tools.portfolio_analysis import portfolio_analysis_tool
@@ -66,8 +67,10 @@ class AIAgent:
         messages = state["messages"]
         if not any(isinstance(m, SystemMessage) for m in messages):
             messages = [SystemMessage(content=self.agent_prompt)] + messages
-            
-        response = self.llm_with_tools.invoke(messages)
+
+        with logfire.span("llm.call", msg_count=len(messages)):
+            response = self.llm_with_tools.invoke(messages)
+            logfire.info("llm.result", tool_calls=len(getattr(response, 'tool_calls', []) or []))
         return {"messages": [response]}
         
     def should_continue(self, state: MessagesState):
