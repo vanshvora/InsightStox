@@ -65,8 +65,8 @@ def get_current_portfolio_profit_loss(user):
         quotes = get_quotes(missing_symbols)
         for q in quotes:
             sym = q.get('symbol')
-            current_p = q.get('currentPrice')
-            if sym and current_p:
+            current_p = q.get('price')
+            if sym and current_p and current_p != 'N/A':
                 prices[sym] = current_p
                 price_store.set(sym, current_p)
                 
@@ -88,6 +88,43 @@ def get_current_portfolio_profit_loss(user):
         total_pl += (unrealized_pl + realized_pl)
         
     return total_pl.quantize(Decimal('0.01'))
+
+
+def get_cost_basis_by_date(user):
+    """
+    Replay buy/sell transactions in chronological order with average costing,
+    mirroring portfolio.services add_buy/add_sell. Returns ({date_iso: total
+    cost basis at end of that day}, {date_iso: cumulative realized gain}).
+    """
+    from django.utils import timezone
+    from portfolio.models import UserTransaction
+
+    per_stock = {}
+    daily_basis = {}
+    daily_realized = {}
+    realized_total = Decimal('0')
+    txs = UserTransaction.objects.filter(user=user).order_by('transaction_date', 'id')
+    for tx in txs:
+        qty = Decimal(str(tx.quantity))
+        if tx.transaction_type == 'BUY':
+            entry = per_stock.setdefault(tx.stock_id, [Decimal('0'), Decimal('0')])
+            entry[0] += qty
+            entry[1] += qty * Decimal(str(tx.price))
+        else:
+            entry = per_stock.get(tx.stock_id)
+            if entry and entry[0] > 0:
+                avg = entry[1] / entry[0]
+                sold = min(qty, entry[0])
+                entry[0] -= sold
+                entry[1] -= sold * avg
+                realized_total += sold * (Decimal(str(tx.price)) - avg)
+                if entry[0] <= 0:
+                    entry[0], entry[1] = Decimal('0'), Decimal('0')
+        day = timezone.localdate(tx.transaction_date).isoformat()
+        daily_basis[day] = sum(spent for _, spent in per_stock.values())
+        daily_realized[day] = realized_total
+
+    return daily_basis, daily_realized
 
 
 def calculate_stock_allocation(user):

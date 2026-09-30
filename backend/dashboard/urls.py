@@ -6,6 +6,7 @@ urlpatterns = [
     path('search/', views.SearchStockView.as_view(), name='search_stock'),
     path('starter/', views.StarterView.as_view(), name='starter_stocks'),
     path('valuation/', views.ValuationView.as_view(), name='valuation'),
+    path('bootstrap/', views.DashboardBootstrapView.as_view(), name='dashboard_bootstrap'),
     
     path('transactions/', AddTransactionView.as_view(), name='add_transaction'),
     

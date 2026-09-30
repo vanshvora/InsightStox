@@ -7,12 +7,15 @@ import InputField from "./InputField.jsx";
 import PasswordInputField from "./PasswordInputField.jsx";
 import  {checkPasswordStrength,validateEmail,} from "../utils/validation.js";
 import { useAppContext } from "../context/AppContext.jsx";
+import { useQueryClient } from "@tanstack/react-query";
+import { clearUserCache } from "../utils/clearUserCache.js";
 import LogoDark from "../assets/LogoDark.png";
 import Swal from "sweetalert2";
 import "./alert.css";
 const LoginForm = ({ toggleForm, resetFormStates: parentResetFormStates }) => {
 /*----------------------------------- State Variables-----------------------------------------------------------*/
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const [isForgotPassword, setIsForgotPassword] = useState(() => {
       return sessionStorage.getItem("forgotpassword") === "true";
     });
@@ -91,6 +94,7 @@ const LoginForm = ({ toggleForm, resetFormStates: parentResetFormStates }) => {
 });
 
           setUserLoggedIn(true);
+          clearUserCache(queryClient);
           navigate("/dashboard");
         }catch(err){  
           console.log("Google login error:", err.response?.data?.message || err.message);
@@ -127,6 +131,7 @@ const LoginForm = ({ toggleForm, resetFormStates: parentResetFormStates }) => {
             const res = await axios.post(import.meta.env.VITE_BACKEND_LINK+"/users/login/", {email : email.trim(), password : password.trim()}, {withCredentials: true});
             console.log("✅ Logged in successfully:", res.data);
             setUserLoggedIn(true);
+            clearUserCache(queryClient);
             Swal.fire({
   toast: true,
   position: "top",

@@ -45,7 +45,7 @@ const TrendingStocks = () => {
     queryKey: ['trendingStocks'],
     queryFn: async () => {
       const res = await axios.get(STOCKS_API);
-      return res.data.data?.map(stockmapping) || [];
+      return res.data.data?.map(stockmapping).slice(0, 6) || [];
     },
     refetchInterval: 120000
   });

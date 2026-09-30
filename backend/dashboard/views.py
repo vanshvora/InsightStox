@@ -73,6 +73,17 @@ class PriceAlertView(APIView):
 
 
 
+def _basis_on_or_before(basis_by_date, date_iso):
+    """Latest known value on or before a date; 0 when no transactions yet."""
+    best = 0.0
+    for day in sorted(basis_by_date):
+        if day <= date_iso:
+            best = float(basis_by_date[day])
+        else:
+            break
+    return best
+
+
 def _safe_float(value, default=None):
     """Convert to float, treating NaN/Inf/invalid as default."""
     try:
@@ -243,6 +254,9 @@ class ValuationView(APIView):
             today_return += (val - prev_val)
             
         total_return = current_value - total_investment
+        from django.db.models import Sum as _Sum
+        total_realized = StockSummary.objects.filter(user=request.user).aggregate(s=_Sum('realized_gain'))['s'] or Decimal('0.00')
+        total_return += total_realized
         total_return_pct = (total_return / total_investment) * 100 if total_investment > 0 else 0
         today_return_pct = (today_return / (current_value - today_return)) * 100 if (current_value - today_return) > 0 else 0
         
@@ -257,6 +271,180 @@ class ValuationView(APIView):
         
         cache.set(cache_key, data, timeout=60*60) # cache for 1 hour
         return Response({'success': True, 'data': data})
+
+
+class DashboardBootstrapView(APIView):
+    def get(self, request):
+        from portfolio.models import StockSummary, UserTransaction
+        from decimal import Decimal
+        from utils.yahoo_finance import get_quotes
+        from utils.price_store import price_store
+        from django.core.cache import cache
+        from .models import GlobalMarketData
+
+        holdings = list(StockSummary.objects.filter(user=request.user, current_holding__gt=0).select_related('stock'))
+        watchlist = list(UserWatchlist.objects.filter(user=request.user).select_related('stock'))
+        market_rows = {m.data_type: m.payload for m in GlobalMarketData.objects.filter(data_type__in=['GAINERS', 'LOSERS', 'ACTIVE', 'NEWS'])}
+
+        starter_symbols = ["^NSEBANK", "^NSEI", "^BSESN"]
+        symbols = sorted({h.stock.symbol for h in holdings} | {w.stock.symbol for w in watchlist} | set(starter_symbols))
+        quotes = get_quotes(symbols) if symbols else []
+        quote_map = {q['symbol']: q for q in quotes if 'symbol' in q}
+
+        name_map = {"^NSEBANK": "NIFTY BANK", "^NSEI": "NIFTY 50", "^BSESN": "SENSEX"}
+        starter = []
+        for sym in starter_symbols:
+            q = dict(quote_map.get(sym, {'symbol': sym}))
+            if sym in name_map:
+                q['name'] = name_map[sym]
+            starter.append(q)
+
+        for sym, q in quote_map.items():
+            try:
+                price_store.set(sym, float(q.get('price')))
+            except Exception:
+                pass
+
+        if holdings:
+            today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            today_tx_stocks = set(UserTransaction.objects.filter(
+                user=request.user,
+                transaction_date__gte=today_start
+            ).values_list('stock_id', flat=True))
+        else:
+            today_tx_stocks = set()
+
+        total_investment = Decimal('0.00')
+        current_value = Decimal('0.00')
+        today_return = Decimal('0.00')
+        sector_values = {}
+        summary = []
+        holdings_data = []
+
+        for holding in holdings:
+            sym = holding.stock.symbol
+
+            q = quote_map.get(sym, {})
+            try:
+                current_price = float(q.get('price', holding.avg_price))
+            except Exception:
+                current_price = float(holding.avg_price)
+            try:
+                prev_close = float(q.get('previousClose', current_price))
+            except Exception:
+                prev_close = current_price
+
+            val = holding.current_holding * Decimal(str(current_price))
+            prev_val = holding.current_holding * Decimal(str(prev_close))
+            spent = holding.spent_amount if hasattr(holding, 'spent_amount') else holding.current_holding * Decimal(str(holding.avg_price))
+            if holding.stock_id in today_tx_stocks:
+                prev_val = spent
+
+            total_investment += spent
+            current_value += val
+            today_return += (val - prev_val)
+
+            total_spent_inr = spent
+            pl = val - total_spent_inr
+            pl_pct = (pl / total_spent_inr * 100) if total_spent_inr > 0 else 0
+            summary.append({
+                'symbol': sym,
+                'marketCap': q.get('marketCap', 'N/A'),
+                'lastPrice': current_price,
+                'change': q.get('change', 0),
+                'changePercent': q.get('changePercent', 0),
+                'currency': holding.stock.currency or 'INR',
+                'marketTime': q.get('marketTime', 'N/A'),
+                'volume': q.get('volume', 'N/A'),
+                'shares': float(holding.current_holding),
+                'dayRange': q.get('dayRange', 'N/A'),
+                'yearRange': q.get('fiftyTwoWeekRange', 'N/A'),
+                'totalValue': float(val.quantize(Decimal('0.01'))),
+                'profitLoss': float(pl.quantize(Decimal('0.01'))),
+                'profitLossPercentage': float(Decimal(str(pl_pct)).quantize(Decimal('0.01'))),
+                'allocationPercentage': 0,
+                'sector': holding.stock.sector or 'Other',
+            })
+
+            shares = float(holding.current_holding)
+            avg_price = float(holding.avg_price)
+            total_cost = shares * avg_price
+            market_value = shares * current_price
+            day_gain_val = (current_price - prev_close) * shares
+            day_gain_pct = ((current_price - prev_close) / prev_close * 100) if prev_close > 0 else 0
+            total_gain_val = market_value - total_cost
+            total_gain_pct = (total_gain_val / total_cost * 100) if total_cost > 0 else 0
+            holdings_data.append({
+                'symbol': sym,
+                'name': holding.stock.short_name,
+                'status': 'Active',
+                'shares': round(shares, 2),
+                'lastPrice': round(current_price, 2),
+                'avgPrice': round(avg_price, 2),
+                'totalCost': round(total_cost, 2),
+                'marketValue': round(market_value, 2),
+                'dayGainValue': round(day_gain_val, 2),
+                'dayGainPercent': round(day_gain_pct, 2),
+                'totalGainValue': round(total_gain_val, 2),
+                'totalGainPercent': round(total_gain_pct, 2),
+                'realizedGain': float(holding.realized_gain),
+            })
+
+            sector = holding.stock.sector or 'Other'
+            sector_values[sector] = sector_values.get(sector, Decimal('0.00')) + val
+
+        for item in summary:
+            if current_value > 0:
+                pct = (Decimal(str(item['totalValue'])) / current_value) * 100
+                item['allocationPercentage'] = float(pct.quantize(Decimal('0.01')))
+            del item['sector']
+
+        total_return = current_value - total_investment
+        from django.db.models import Sum as _Sum
+        total_realized = StockSummary.objects.filter(user=request.user).aggregate(s=_Sum('realized_gain'))['s'] or Decimal('0.00')
+        total_return += total_realized
+        total_return_pct = (total_return / total_investment) * 100 if total_investment > 0 else 0
+        today_return_pct = (today_return / (current_value - today_return)) * 100 if (current_value - today_return) > 0 else 0
+        valuation = {
+            'totalValuation': float(current_value.quantize(Decimal('0.01'))),
+            'totalInvestment': float(total_investment.quantize(Decimal('0.01'))),
+            'todayProfitLoss': float(today_return.quantize(Decimal('0.01'))),
+            'todayProfitLosspercentage': float(Decimal(str(today_return_pct)).quantize(Decimal('0.01'))),
+            'overallProfitLoss': float(total_return.quantize(Decimal('0.01'))),
+            'overallProfitLosspercentage': float(Decimal(str(total_return_pct)).quantize(Decimal('0.01')))
+        }
+        cache.set(f"user_valuation_{request.user.id}", valuation, timeout=60*60)
+
+        allocation = {'labels': [], 'values': []}
+        if current_value > 0:
+            ordered = sorted(sector_values.items(), key=lambda kv: kv[1], reverse=True)
+            allocation = {
+                'labels': [k for k, _ in ordered],
+                'values': [float(((v / current_value) * 100).quantize(Decimal('0.01'))) for _, v in ordered],
+            }
+
+        stock_map = {w.stock.symbol: w.stock.short_name or w.stock.symbol for w in watchlist}
+        watchlist_quotes = []
+        for w in watchlist:
+            q = dict(quote_map.get(w.stock.symbol, {'symbol': w.stock.symbol}))
+            if q.get('symbol') in stock_map:
+                q['name'] = stock_map[q['symbol']]
+            watchlist_quotes.append(q)
+
+        return Response({'success': True, 'data': _sanitize_for_json({
+            'starter': starter,
+            'valuation': valuation,
+            'summary': summary,
+            'holdings': holdings_data,
+            'watchlist': watchlist_quotes,
+            'allocation': allocation,
+            'market': {
+                'active': market_rows.get('ACTIVE', []),
+                'gainers': market_rows.get('GAINERS', []),
+                'losers': market_rows.get('LOSERS', []),
+                'news': market_rows.get('NEWS', []),
+            },
+        })})
 
 
 class WatchlistView(APIView):
@@ -398,12 +586,17 @@ class PortfolioValuationHistoryView(APIView):
         time_period = request.query_params.get('timePeriod', '1Y')
         
         now = timezone.now()
-        
+
+        from dashboard.services import get_cost_basis_by_date
+        basis_by_date, realized_by_date = get_cost_basis_by_date(request.user)
+
         if time_period == '1D':
             # Hourly data for last 24h
             start = now - timedelta(days=1)
             history = PortfolioValuationHourly.objects.filter(user=request.user, timestamp__gte=start).order_by('timestamp')
-            data = [{'date': h.timestamp.isoformat(), 'valuation': float(h.portfolio_valuation)} for h in history]
+            basis = _basis_on_or_before(basis_by_date, now.date().isoformat())
+            realized = _basis_on_or_before(realized_by_date, now.date().isoformat())
+            data = [{'date': h.timestamp.isoformat(), 'valuation': float(h.portfolio_valuation) - basis + realized} for h in history]
             
         else:
             # Daily data — return full span so the frontend can slice 30D / 6M / 1Y
@@ -427,25 +620,27 @@ class PortfolioValuationHistoryView(APIView):
             for h in history:
                 by_date[h.date.isoformat()] = float(h.portfolio_valuation)
 
-            from dashboard.services import get_current_portfolio_profit_loss
-            current_val = float(get_current_portfolio_profit_loss(request.user))
+            from dashboard.services import get_current_portfolio_valuation
+            current_val = float(get_current_portfolio_valuation(request.user))
             today_key = now.date().isoformat()
+            has_history = len(by_date) > 0
             by_date[today_key] = current_val
 
-            data = [{'date': d, 'valuation': v} for d, v in sorted(by_date.items())]
+            data = [{'date': d, 'valuation': v - _basis_on_or_before(basis_by_date, d) + _basis_on_or_before(realized_by_date, d)} for d, v in sorted(by_date.items())]
 
-            # Baseline at 0 the day before the first real point so new buys show as a jump
-            if data:
+            # Baseline at 0 only when real history exists; otherwise it would
+            # fabricate a one-day crash from 0 to the full cumulative P&L
+            if data and has_history:
                 first_date = date.fromisoformat(data[0]['date'])
                 if data[0]['valuation'] != 0:
                     baseline = (first_date - timedelta(days=1)).isoformat()
                     if baseline not in by_date:
                         data.insert(0, {'date': baseline, 'valuation': 0.0})
-            else:
+            elif not data:
                 yesterday = (now.date() - timedelta(days=1)).isoformat()
                 data = [
                     {'date': yesterday, 'valuation': 0.0},
-                    {'date': today_key, 'valuation': current_val},
+                    {'date': today_key, 'valuation': current_val - _basis_on_or_before(basis_by_date, today_key) + _basis_on_or_before(realized_by_date, today_key)},
                 ]
             
         return Response({'success': True, 'data': {'daily': data}})

@@ -10,6 +10,8 @@ import exiticon from "../assets/exiticon.svg";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./Navbar.css";
 import { useAppContext } from "../context/AppContext";
+import { useQueryClient } from "@tanstack/react-query";
+import { clearUserCache } from "../utils/clearUserCache.js";
 // import tailwind from "tailwindcss/tailwind.css";
 const Navbar = ({ darkMode, setDarkMode, pageType, profileData = {} }) => {
   
@@ -23,6 +25,7 @@ const Navbar = ({ darkMode, setDarkMode, pageType, profileData = {} }) => {
   const handleProfileClose = () => setIsProfileOpen(false);
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   const {userDetails} = useAppContext();
+  const queryClient = useQueryClient();
 
 
  /*----------------------------------------------------Functions------------------------------------------------------- */
@@ -31,6 +34,7 @@ const Navbar = ({ darkMode, setDarkMode, pageType, profileData = {} }) => {
   };
   const handleLogout = () => {
       sessionStorage.setItem("isLoggingOut", "true");
+      clearUserCache(queryClient);
       axios.post(import.meta.env.VITE_BACKEND_LINK + "/users/logout/", {}, {withCredentials: true})
         .catch(e => console.error("Error during logout:", e))
         .finally(() => {
@@ -41,7 +45,7 @@ const Navbar = ({ darkMode, setDarkMode, pageType, profileData = {} }) => {
       window.location.href = "/";
   }
   function checkPageType(){
-    if(pageType !== "/" && pageType !== "my-profile" && pageType !== "data-privacy" && pageType !== "preferences" && pageType !== "help-support" && pageType !== "activity"){
+    if(pageType !== "/" && pageType !== "my-profile" && pageType !== "data-privacy" && pageType !== "help-support" && pageType !== "activity"){
       return true;
     }
     else return false;

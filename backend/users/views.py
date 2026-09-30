@@ -46,11 +46,15 @@ def set_auth_cookie(response, token):
 
 def delete_auth_cookie(response):
     is_prod = not settings.DEBUG
-    response.delete_cookie(
-        'auth_token', 
-        samesite='None' if is_prod else 'Lax',
+    response.set_cookie(
+        'auth_token',
+        '',
+        max_age=0,
+        expires='Thu, 01 Jan 1970 00:00:00 GMT',
+        path='/',
         httponly=True,
-        secure=is_prod
+        samesite='None' if is_prod else 'Lax',
+        secure=is_prod,
     )
     return response
 

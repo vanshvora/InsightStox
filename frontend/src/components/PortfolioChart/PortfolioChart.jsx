@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import {
@@ -11,7 +11,6 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import { Line } from "react-chartjs-2";
 import "./PortfolioChart.css";
 
 ChartJS.register(
@@ -31,23 +30,25 @@ const RANGE_DAYS = {
 };
 
 function toDateKey(value) {
-  const d = new Date(value);
+  if (typeof value === 'string') {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  }
+  const d = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(d.getTime())) return null;
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 /**
  * Build a continuous daily series for the selected range.
- * Days before the first real valuation stay at 0 so a new buy shows as a jump,
- * instead of a flat line padded with today's value.
+ * Starts at the first real valuation - no zero-padding before it, so the
+ * chart never fabricates a crash from 0 to the cumulative P&L.
+ * Gaps after it forward-fill the last known value.
  */
 function buildRangeSeries(daily, range) {
   const days = RANGE_DAYS[range] || 30;
   const end = new Date();
   end.setHours(0, 0, 0, 0);
-
-  const start = new Date(end);
-  start.setDate(start.getDate() - (days - 1));
 
   const byDate = new Map();
   for (const point of daily) {
@@ -56,7 +57,14 @@ function buildRangeSeries(daily, range) {
     byDate.set(key, Number(point.valuation) || 0);
   }
 
-  const firstRealKey = [...byDate.keys()].sort()[0] || null;
+  const firstKey = [...byDate.keys()].sort()[0] || null;
+  let start = new Date(end);
+  start.setDate(start.getDate() - (days - 1));
+  if (firstKey) {
+    const first = new Date(firstKey);
+    first.setHours(0, 0, 0, 0);
+    if (first > start) start = first;
+  }
   const series = [];
   let lastVal = 0;
 
@@ -64,10 +72,10 @@ function buildRangeSeries(daily, range) {
     const key = toDateKey(cursor);
     if (byDate.has(key)) {
       lastVal = byDate.get(key);
-    } else if (!firstRealKey || key < firstRealKey) {
-      lastVal = 0;
     }
-    // after first real point: forward-fill last known valuation
+    // no zero-padding: gaps before the first real point are omitted,
+    // after it we forward-fill the last known value
+    if (!byDate.has(key) && (!firstKey || key < firstKey)) continue;
     series.push({ date: new Date(cursor).toISOString(), valuation: lastVal });
   }
 
@@ -93,7 +101,7 @@ function buildLabels(sliced, range) {
 
 function pointRadii(values) {
   return values.map((value, index) => {
-    if (index === 0) return value > 0 ? 3 : 0;
+    if (index === 0 || index === values.length - 1) return 4;
     return value !== values[index - 1] ? 4 : 0;
   });
 }
@@ -137,6 +145,9 @@ export default function PortfolioChart() {
       ? "Session expired. Please log in again."
       : "Failed to fetch portfolio performance data."
     : "";
+
+  const canvasRef = useRef(null);
+  const chartRef = useRef(null);
 
   const sliced = useMemo(() => buildRangeSeries(daily, range), [daily, range]);
   const labels = useMemo(() => buildLabels(sliced, range), [sliced, range]);
@@ -260,6 +271,25 @@ export default function PortfolioChart() {
     };
   }, [range, hiddenDates, screenWidth, values]);
 
+  useEffect(() => {
+    if (!canvasRef.current || !sliced.length) return;
+    if (chartRef.current) {
+      chartRef.current.destroy();
+      chartRef.current = null;
+    }
+    chartRef.current = new ChartJS(canvasRef.current, {
+      type: "line",
+      data: chartData,
+      options,
+    });
+    return () => {
+      if (chartRef.current) {
+        chartRef.current.destroy();
+        chartRef.current = null;
+      }
+    };
+  }, [chartData, options, sliced.length]);
+
   if (loading) {
     return (
       <div className="portfoliochart-container">
@@ -299,7 +329,7 @@ export default function PortfolioChart() {
           </div>
 
           <div className="portfoliochart-graph">
-            <Line key={range} options={options} data={chartData} />
+            <canvas ref={canvasRef} />
           </div>
         </div>
       </div>

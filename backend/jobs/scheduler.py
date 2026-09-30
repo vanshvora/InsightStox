@@ -275,8 +275,9 @@ def check_price_alerts():
             quotes = get_quotes(chunk)
             for q in quotes:
                 sym = q.get('symbol')
-                if sym and q.get('currentPrice'):
-                    prices[sym] = q['currentPrice']
+                price_str = q.get('price')
+                if sym and price_str and price_str != 'N/A':
+                    prices[sym] = price_str
 
     # Evaluate alerts
     for alert in active_alerts:

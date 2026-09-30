@@ -30,7 +30,7 @@ export const Dashboard = () => {
     
           const intervalId = setInterval(() => {
             ensureAuth(navigate, false).catch((e) => console.error(e));
-          }, 10000);
+          }, 60000);
     
           return () => {
             clearInterval(intervalId);

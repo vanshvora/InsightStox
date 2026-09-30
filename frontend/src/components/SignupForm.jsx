@@ -6,12 +6,15 @@ import InputField from "./InputField.jsx";
 import PasswordInputField from "./PasswordInputField.jsx";
 import  {checkPasswordStrength,validateEmail,validateNameStrength} from "../utils/validation.js";
 import { useAppContext } from "../context/AppContext.jsx"
+import { useQueryClient } from "@tanstack/react-query";
+import { clearUserCache } from "../utils/clearUserCache.js";
 import LogoDark from "../assets/LogoDark.png";
 import Swal from "sweetalert2";
 import "./alert.css";
 const SignupForm = ({ toggleForm, resetFormStates: parentResetFormStates }) => {
 /*----------------------------------- State Variables----------------------------------------------------------- */
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const [otp, setOtp] = useState("");
     const [isOtpSent, setIsOtpSent] = useState(false);
     const [email, setEmail] = useState("");
@@ -133,6 +136,7 @@ const handleRegister = async () => {
     
     setIsOtpSent((prev)=>!prev);
     setUserLoggedIn(true);
+    clearUserCache(queryClient);
     navigate("/dashboard");
     } catch (err) {
           setTitleError(err.response.data.message);

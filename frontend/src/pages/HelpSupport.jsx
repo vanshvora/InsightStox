@@ -190,7 +190,7 @@ const handleFeedbackSubmit = async (event) => {
           <p className="faq-question">Q: Can I delete my account and data permanently?</p>
           <p className="faq-answer">A: Yes, from the Data & Privacy section. Your data will be removed instantly upon request.</p>
           <p className="faq-question">Q: Why am I not receiving alerts?</p>
-          <p className="faq-answer">A: Check your Preferences section to ensure alerts are enabled and your email is verified.</p>
+          <p className="faq-answer">A: Check the Data & Privacy section to ensure alerts are enabled and your email is verified.</p>
         </div>
       </section>
 

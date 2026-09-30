@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import axios from 'axios';
+import { useQuery } from '@tanstack/react-query';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, Title } from 'chart.js';
 import { Pie } from 'react-chartjs-2';
 import './SectorAllocation.css';
@@ -81,54 +82,37 @@ const formatDataForChart = (dataSet) => ({
 });
 
 export default function SectorAllocationChart() {
-  const [chartData, setChartData] = useState({ datasets: [] });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  // Always send cookies for authenticated users
-  axios.defaults.withCredentials = true;
-
-  // Dynamic backend URL
   const BACKEND_URL = import.meta.env.VITE_BACKEND_LINK ;
   const ALLOCATION_API = `${BACKEND_URL}/dashboard/allocation/`;
 
-  // Fetch sector allocation from backend
-  const fetchAllocationData = async () => {
-    setLoading(true);
-    setError('');
-
-    try {
-      const response = await axios.get(ALLOCATION_API);
-      const apiData = response.data;
-
-      if (!apiData.labels || !apiData.values) {
+  const { data: apiData, isLoading: loading, isError } = useQuery({
+    queryKey: ['allocation'],
+    queryFn: async () => {
+      const response = await axios.get(ALLOCATION_API, { withCredentials: true });
+      const data = response.data;
+      if (!data.labels || !data.values) {
         throw new Error('Invalid data format received from backend');
       }
+      return data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
-      setChartData(formatDataForChart(apiData));
-    } catch (err) {
-      console.error('Error fetching allocation data:', err);
-
-      if (err.response?.status === 401) {
-        setError('Session expired. Please log in again.');
-      } else {
-        setError('Failed to fetch allocation data from backend.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchAllocationData();
-  }, []);
+  const chartData = apiData ? formatDataForChart(apiData) : { datasets: [] };
 
   if (loading) return <div className="loading-container">Loading Allocation Data...</div>;
 
-  if (error)
+  if (isError)
     return (
       <div className="sector-allocation-container">
-        <p className="error-text">{error}</p>
+        <p className="error-text">Failed to fetch allocation data from backend.</p>
+      </div>
+    );
+
+  if (!apiData?.labels?.length)
+    return (
+      <div className="sector-allocation-container">
+        <p className="error-text">No holdings to allocate yet.</p>
       </div>
     );
 
